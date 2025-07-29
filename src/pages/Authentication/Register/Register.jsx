@@ -2,10 +2,9 @@ import React, { useContext } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { AuthContext } from '../../../contexts/AuthContext';
-import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import useAxios from '../../../hooks/useAxios';
 
-const imgbbApiKey = import.meta.env.VITE_API_KEY; 
+const imgbbApiKey = import.meta.env.VITE_API_KEY;
 const imgbbUploadUrl = `https://api.imgbb.com/1/upload?key=${imgbbApiKey}`;
 
 const Register = () => {
@@ -24,6 +23,13 @@ const Register = () => {
     const password = formData.get('password');
     const role = formData.get('role');
     const imageFile = formData.get('photo');
+
+    setErrorMessage('');
+
+    const passRegex = /(?=.*[a-z])(?=.*[A-Z]).{6,}/;
+    if (!passRegex.test(password)) {
+      return setErrorMessage('Password must include at least 1 lowercase, 1 uppercase, and be at least 6 characters.');
+    }
 
     try {
       let photoUrl = null;
@@ -54,7 +60,7 @@ const Register = () => {
         email,
         photoUrl,
         role,
-        coins: Number(role === 'worker' ? 10 : 50),
+        coins: role === 'worker' ? 10 : 50,
       };
 
       await axiosInstance.post(`/api/users`, userPayload);
@@ -76,92 +82,95 @@ const Register = () => {
   };
 
   const handleGoogleSignIn = async () => {
-  try {
-    const result = await GoogleSignIn();
-    const signedInUser = result.user;
+    try {
+      const result = await GoogleSignIn();
+      const signedInUser = result.user;
 
-    if (!signedInUser.email || !signedInUser.uid) {
-      throw new Error('Google user info is incomplete');
+      if (!signedInUser.email || !signedInUser.uid) {
+        throw new Error('Google user info is incomplete');
+      }
+
+      const existingRes = await axiosInstance.get(`/api/users/${signedInUser.email}`);
+      const userExists = existingRes.data;
+
+      if (userExists) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Signed in with Google',
+          toast: true,
+          position: 'top',
+          timer: 1500,
+          showConfirmButton: false,
+        });
+      } else {
+        const userPayload = {
+          uid: signedInUser.uid,
+          name: signedInUser.displayName || 'No Name',
+          email: signedInUser.email,
+          photoUrl: signedInUser.photoURL || null,
+          role: 'worker',
+          coins: 10,
+        };
+
+        await axiosInstance.post(`/api/users`, userPayload);
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Signed in with Google & Registered',
+          toast: true,
+          position: 'top',
+          timer: 1500,
+          showConfirmButton: false,
+        });
+      }
+
+      navigate(location?.state?.from?.pathname || '/');
+    } catch (error) {
+      console.error('Google Sign In Error:', error.message);
+      setErrorMessage(error.message);
     }
-
-    // 🔍 Check if user already exists in DB
-    const existingRes = await axiosInstance.get(`/api/users/${signedInUser.email}`);
-    const userExists = existingRes.data;
-
-    if (userExists) {
-      // User exists: Don't override anything
-      Swal.fire({
-        icon: 'success',
-        title: 'Signed in with Google',
-        toast: true,
-        position: 'top',
-        timer: 1500,
-        showConfirmButton: false,
-      });
-    } else {
-      // New user: Create with default role 'worker' & coins
-      const userPayload = {
-        uid: signedInUser.uid,
-        name: signedInUser.displayName || 'No Name',
-        email: signedInUser.email,
-        photoUrl: signedInUser.photoURL || null,
-        role: 'worker',
-        coins: 10,
-      };
-
-      await axiosInstance.post(`/api/users`, userPayload);
-
-      Swal.fire({
-        icon: 'success',
-        title: 'Signed in with Google & Registered',
-        toast: true,
-        position: 'top',
-        timer: 1500,
-        showConfirmButton: false,
-      });
-    }
-
-    navigate(location?.state?.from?.pathname || '/');
-  } catch (error) {
-    console.error('Google Sign In Error:', error.message);
-    setErrorMessage(error.message);
-  }
-};
-
+  };
 
   return (
-    <div className="card w-full max-w-sm mx-auto shrink-0 py-10 bg-base-300 px-6 my-8">
-      <h1 className="text-3xl font-bold text-center">Register</h1>
-      <div className="card-body rounded-xl">
-        <form onSubmit={handleRegister}>
-          <label className="label">Name</label>
-          <input type="text" name="name" className="input" placeholder="Name" required />
+    <div className="min-h-screen bg-base-200 flex items-center justify-center px-4">
+      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-xl shadow-lg">
+        <h2 className="text-3xl font-bold text-center">Create Account</h2>
+        
+        <form onSubmit={handleRegister} className="space-y-4">
+          <div>
+            <label className="label font-medium">Full Name</label>
+            <input type="text" name="name" className="input input-bordered w-full" placeholder="Your Name" required />
+          </div>
 
-          <label className="label">Email</label>
-          <input type="email" name="email" className="input" placeholder="Email" required />
+          <div>
+            <label className="label font-medium">Email</label>
+            <input type="email" name="email" className="input input-bordered w-full" placeholder="Your Email" required />
+          </div>
 
-          <label className="label">Photo (upload)</label>
-          <input type="file" name="photo" className="file-input w-full" accept="image/*" />
+          <div>
+            <label className="label font-medium">Upload Photo</label>
+            <input type="file" name="photo" className="file-input file-input-bordered w-full" accept="image/*" />
+          </div>
 
-          <label className="label">Password</label>
-          <input type="password" name="password" className="input" placeholder="Password" required />
+          <div>
+            <label className="label font-medium">Password</label>
+            <input type="password" name="password" className="input input-bordered w-full" placeholder="Password" required />
+          </div>
 
-          <label className="label">Role</label>
-          <select name="role" className="select select-bordered w-full" required>
-            <option value="">Select Role</option>
-            <option value="worker">Worker</option>
-            <option value="buyer">Buyer</option>
-          </select>
+          <div>
+            <label className="label font-medium">Select Role</label>
+            <select name="role" className="select select-bordered w-full" required>
+              <option value="">-- Choose Role --</option>
+              <option value="worker">Worker</option>
+              <option value="buyer">Buyer</option>
+            </select>
+          </div>
 
-          <button type="submit" className="btn btn-neutral w-full mt-4">Register</button>
+          <button type="submit" className="btn btn-primary w-full">Register</button>
         </form>
 
-        <p className="text-start mt-2">
-          Already have an account? <Link to="/login" className="underline">Login</Link>
-        </p>
-
         {errorMessage && (
-          <p className="text-red-400 text-center mt-2">{errorMessage}</p>
+          <div className="text-red-500 text-sm text-center">{errorMessage}</div>
         )}
 
         <div className="divider">OR</div>
@@ -169,6 +178,11 @@ const Register = () => {
         <button onClick={handleGoogleSignIn} className="btn btn-outline w-full">
           Sign in with Google
         </button>
+
+        <p className="text-center text-sm">
+          Already have an account?{' '}
+          <Link to="/login" className="text-blue-500 hover:underline">Login</Link>
+        </p>
       </div>
     </div>
   );
