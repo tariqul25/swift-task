@@ -1,139 +1,123 @@
 import React, { useEffect, useState } from 'react';
-import { Trash2 } from 'lucide-react';
+import axios from 'axios';
 import Swal from 'sweetalert2';
 
 const ManageUsers = () => {
   const [users, setUsers] = useState([]);
 
-  useEffect(() => {
-    // Mock data – replace with API call
-    setUsers([
-      {
-        id: 1,
-        displayName: "Alice Johnson",
-        email: "alice@example.com",
-        photoURL: "/placeholder.svg",
-        role: "worker",
-        coins: 450
-      },
-      {
-        id: 2,
-        displayName: "Bob Smith",
-        email: "bob@example.com",
-        photoURL: "/placeholder.svg",
-        role: "buyer",
-        coins: 1200
-      },
-      {
-        id: 3,
-        displayName: "Carol Davis",
-        email: "carol@example.com",
-        photoURL: "/placeholder.svg",
-        role: "worker",
-        coins: 320
-      }
-    ]);
-  }, []);
-
-  const handleDeleteUser = (userId) => {
-    Swal.fire({
-      title: 'Are you sure?',
-      text: 'This action cannot be undone!',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Yes, delete it!'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        setUsers(users.filter(u => u.id !== userId));
-        Swal.fire('Deleted!', 'User has been deleted.', 'success');
-      }
-    });
+  const fetchUsers = async () => {
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/users`);
+      setUsers(res.data || []);
+    } catch (err) {
+      console.error('Failed to fetch users', err);
+    }
   };
 
-  const handleUpdateRole = (userId, newRole) => {
-    setUsers(users.map(u => 
-      u.id === userId ? { ...u, role: newRole } : u
-    ));
-    Swal.fire({
-      title: 'Success!',
-      text: 'User role updated successfully',
-      icon: 'success',
-      timer: 1500,
-      showConfirmButton: false
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const handleDeleteUser = async (email) => {
+    const confirm = await Swal.fire({
+      title: 'Are you sure?',
+      text: `This will permanently delete the user: ${email}`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, delete it!',
     });
+
+    if (confirm.isConfirmed) {
+      try {
+        const res = await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/users/${email}`);
+        if (res.data.success) {
+          Swal.fire('Deleted!', 'User has been deleted.', 'success');
+          fetchUsers();
+        } else {
+          Swal.fire('Error', res.data.message, 'error');
+        }
+      } catch (err) {
+        console.error('Failed to delete user', err);
+        Swal.fire('Error!', 'Something went wrong.', 'error');
+      }
+    }
+  };
+
+  const handleUpdateRole = async (email, newRole) => {
+    try {
+      const res = await axios.patch(`${import.meta.env.VITE_BACKEND_URL}/api/users/${email}`, {
+        role: newRole,
+      });
+      if (res.data.success) {
+        Swal.fire('Updated!', 'Role has been updated.', 'success');
+        fetchUsers();
+      } else {
+        Swal.fire('Error', res.data.message, 'error');
+      }
+    } catch (err) {
+      Swal.fire('Error!', 'Something went wrong while updating role.', 'error');
+    }
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm">
-      <div className="p-6 border-b">
-        <h2 className="text-xl font-semibold text-gray-900">Manage Users</h2>
-      </div>
-      <div className="p-6">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  User
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Role
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Coins
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
+    <div className="p-4">
+      <h2 className="text-2xl font-bold mb-4">Manage Users</h2>
+
+      <div className="overflow-x-auto">
+        <table className="table-auto w-full border-collapse border border-gray-200">
+          <thead>
+            <tr className="bg-gray-100 text-left">
+              <th className="p-2 border">Photo</th>
+              <th className="p-2 border">Name</th>
+              <th className="p-2 border">Email</th>
+              <th className="p-2 border">Role</th>
+              <th className="p-2 border">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map((user) => (
+              <tr key={user._id}>
+                <td className="p-2 border">
+                  <img
+                    src={user.photoUrl || '/placeholder.png'}
+                    alt={user.name}
+                    className="w-10 h-10 rounded-full object-cover"
+                  />
+                </td>
+                <td className="p-2 border">{user.name}</td>
+                <td className="p-2 border">{user.email}</td>
+                <td className="p-2 border">
+                  <select
+                    value={user.role}
+                    onChange={(e) => handleUpdateRole(user.email, e.target.value)}
+                    className="border px-2 py-1 rounded"
+                  >
+                    <option value="buyer">Buyer</option>
+                    <option value="worker">Worker</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </td>
+                <td className="p-2 border">
+                  <button
+                    onClick={() => handleDeleteUser(user.email)}
+                    className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                  >
+                    Delete
+                  </button>
+                </td>
               </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {users.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <img 
-                        src={user.photoURL} 
-                        alt={user.displayName}
-                        className="w-10 h-10 rounded-full object-cover mr-3"
-                      />
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {user.displayName}
-                        </div>
-                        <div className="text-sm text-gray-500">{user.email}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <select
-                      value={user.role}
-                      onChange={(e) => handleUpdateRole(user.id, e.target.value)}
-                      className="border border-gray-300 rounded-md px-3 py-1 text-sm"
-                    >
-                      <option value="worker">Worker</option>
-                      <option value="buyer">Buyer</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {user.coins}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button
-                      onClick={() => handleDeleteUser(user.id)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+
+
+            {users.length === 0 && (
+              <tr>
+                <td colSpan="5" className="text-center p-4 text-gray-500">
+                  No users found.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );
