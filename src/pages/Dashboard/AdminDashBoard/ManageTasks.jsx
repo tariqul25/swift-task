@@ -2,9 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import axios from 'axios';
 import Swal from 'sweetalert2';
+import useAxiosSecure from '../../../hooks/useAxiosSecure';
+import useAxios from '../../../hooks/useAxios';
 
 const ManageTasks = () => {
   const [tasks, setTasks] = useState([]);
+  const axiosInstance=useAxios()
 
 
   // Fetch tasks on mount
@@ -14,7 +17,7 @@ const ManageTasks = () => {
 
   const fetchTasks = async () => {
     try {
-      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/tasks`);
+      const res = await axiosInstance.get(`/api/tasks`);
       setTasks(res.data);
     } catch (error) {
       console.error('Failed to fetch tasks', error);
@@ -23,7 +26,7 @@ const ManageTasks = () => {
 
  const handleDeleteTask = async (taskId) => {
   try {
-    await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${taskId}`);
+    await axiosInstance.delete(`/api/tasks/${taskId}`);
     setTasks(tasks.filter(task => task._id !== taskId));
     Swal.fire({
       icon: 'success',

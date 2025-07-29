@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import useAuth from '../../../hooks/useAuth';
 import axios from 'axios';
+import useAxios from '../../../hooks/useAxios';
 
 const WorkerHome = () => {
   const { user } = useAuth();
@@ -17,11 +18,12 @@ const WorkerHome = () => {
     totalEarning: 0,
     approvedSubmissions: []
   });
+  const axiosInstance=useAxios()
 
   useEffect(() => {
     if (!user?.email) return;
 
-    axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/worker-stats/${user.email}`)
+    axiosInstance.get(`/api/worker-stats/${user.email}`)
       .then(res => setStats(res.data))
       .catch(err => console.error("Failed to load stats", err));
   }, [user]);

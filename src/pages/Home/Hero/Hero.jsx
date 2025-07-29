@@ -10,19 +10,19 @@ const slides = [
     title: "Earn Money with Simple Tasks",
     subtitle: "Complete micro-tasks and get paid instantly",
     background: "bg-gradient-to-r from-blue-600 to-purple-600",
-    image: "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=800&h=600&fit=crop"
+    image: "https://i.ibb.co/BHFqtDxx/istockphoto-2185857500-612x612.jpg"
   },
   {
     title: "Post Tasks & Get Results",
     subtitle: "Hire skilled workers for your projects",
     background: "bg-gradient-to-r from-green-600 to-blue-600",
-    image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800&h=600&fit=crop"
+    image: "https://i.ibb.co/8DFYGfSR/computer-laptop-NLBN1-GQQET.jpg"
   },
   {
     title: "Join Thousands of Users",
     subtitle: "Start your earning journey today",
     background: "bg-gradient-to-r from-purple-600 to-pink-600",
-    image: "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=800&h=600&fit=crop"
+    image: "https://i.ibb.co/sdRTBN9D/home-office-4996834-1280.jpg"
   }
 ];
 

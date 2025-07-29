@@ -2,16 +2,19 @@ import React, { use, useEffect, useState } from 'react';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import { AuthContext } from '../../../contexts/AuthContext';
+import useAxiosSecure from '../../../hooks/useAxiosSecure';
+import useAxios from '../../../hooks/useAxios';
 
 const MyTasks = () => {
   const { user, updateUserCoins } = use(AuthContext)
   console.log(user);
   const [tasks, setTasks] = useState([]);
   const [editingTask, setEditingTask] = useState(null);
+  const axiosInstance=useAxios()
 
   const fetchTasks = async () => {
     try {
-      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/user/${user.email}`);
+      const res = await axiosInstance.get(`/api/tasks/user/${user.email}`);
       // Sort by descending completion_date
       const sorted = res.data.sort((a, b) => new Date(b.completion_date) - new Date(a.completion_date));
       setTasks(sorted);
@@ -28,7 +31,7 @@ const MyTasks = () => {
 
   const handleUpdate = async () => {
     try {
-      const res = await axios.patch(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${editingTask._id}`, {
+      const res = await axiosInstance.patch(`/api/tasks/${editingTask._id}`, {
         task_title: editingTask.task_title,
         task_detail: editingTask.task_detail,
         submission_info: editingTask.submission_info,
@@ -54,7 +57,7 @@ const MyTasks = () => {
   if (!confirm.isConfirmed) return;
 
   try {
-    await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/tasks/${task._id}`);
+    await axiosInstance.delete(`/api/tasks/${task._id}`);
 
     Swal.fire('Deleted!', 'Task has been deleted.', 'success');
     fetchTasks();

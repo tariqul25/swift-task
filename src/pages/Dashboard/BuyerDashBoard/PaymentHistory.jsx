@@ -2,15 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { CreditCard, Calendar, CheckCircle, Clock } from 'lucide-react';
 import useAuth from '../../../hooks/useAuth';
 import axios from 'axios';
+import useAxiosSecure from '../../../hooks/useAxiosSecure';
+import useAxios from '../../../hooks/useAxios';
 
 const PaymentHistory = () => {
   const { user } = useAuth();
   const [payments, setPayments] = useState([]);
-  console.log(payments);
-
+  const axiosInstance=useAxios()
   useEffect(() => {
     if (user?.email) {
-      axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/payments/${user.email}`)
+      axiosInstance.get(`/api/payments/${user.email}`)
         .then(res => {
           setPayments(res.data);
         })

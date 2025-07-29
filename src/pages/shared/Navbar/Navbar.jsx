@@ -16,7 +16,7 @@ const Navbar = () => {
     setIsProfileOpen(false);
   };
 
-  const githubUrl = "https://github.com/your-username/micro-task-platform";
+  const githubUrl = "https://github.com/tariqul25";
 
   const commonLinks = (
     <>
@@ -35,9 +35,9 @@ const Navbar = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
             <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 text-white flex items-center justify-center rounded-lg font-bold text-sm">
-              MT
+              ST
             </div>
-            <h1 className="font-bold text-xl text-gray-800">MicroTask</h1>
+            <h1 className="font-bold text-xl text-gray-800">SwiftTasks</h1>
           </Link>
 
           {/* Desktop Menu */}

@@ -2,12 +2,15 @@ import React, { useContext, useState } from 'react';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import { AuthContext } from '../../../contexts/AuthContext';
+import useAxiosSecure from '../../../hooks/useAxiosSecure';
+import useAxios from '../../../hooks/useAxios';
 
 const Withdrawal = () => {
   const { user, coins } = useContext(AuthContext);
   const [paymentSystem, setPaymentSystem] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
+  const axiosInstance=useAxios()
 
   const handleWithdraw = async (e) => {
     e.preventDefault();
@@ -35,7 +38,7 @@ const Withdrawal = () => {
     };
 
     try {
-      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/withdrawals`, withdrawalData);
+      const res = await axiosInstance.post(`/api/withdrawals`, withdrawalData);
       if (res.data?.result?.insertedId) {
         Swal.fire('Success', 'Your withdrawal request has been submitted.', 'success');
         setWithdrawAmount('');

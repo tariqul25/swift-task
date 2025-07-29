@@ -2,24 +2,49 @@ import React, { useContext } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { AuthContext } from '../../../contexts/AuthContext';
-import axios from 'axios';
+import useAxiosSecure from '../../../hooks/useAxiosSecure';
+import useAxios from '../../../hooks/useAxios';
+
+const imgbbApiKey = import.meta.env.VITE_API_KEY; 
+const imgbbUploadUrl = `https://api.imgbb.com/1/upload?key=${imgbbApiKey}`;
 
 const Register = () => {
   const { createUser, GoogleSignIn, setErrorMessage, errorMessage } = useContext(AuthContext);
   const location = useLocation();
   const navigate = useNavigate();
-
-
-
+  const axiosInstance = useAxios();
 
   const handleRegister = async (e) => {
     e.preventDefault();
     const form = e.target;
     const formData = new FormData(form);
-    const userData = Object.fromEntries(formData.entries());
-    const { name, email, password, photoUrl, role } = userData;
+
+    const name = formData.get('name');
+    const email = formData.get('email');
+    const password = formData.get('password');
+    const role = formData.get('role');
+    const imageFile = formData.get('photo');
 
     try {
+      let photoUrl = null;
+
+      if (imageFile && imageFile.size > 0) {
+        const imageData = new FormData();
+        imageData.append('image', imageFile);
+
+        const imgbbRes = await fetch(imgbbUploadUrl, {
+          method: 'POST',
+          body: imageData,
+        });
+
+        const imgbbData = await imgbbRes.json();
+        if (imgbbData.success) {
+          photoUrl = imgbbData.data.url;
+        } else {
+          throw new Error('Failed to upload image');
+        }
+      }
+
       const result = await createUser(email, password);
       const createdUser = result.user;
 
@@ -27,14 +52,12 @@ const Register = () => {
         uid: createdUser.uid,
         name,
         email,
-        photoUrl: photoUrl || null,
+        photoUrl,
         role,
-        coins: Number(role === 'worker' ? 10 : 50), 
+        coins: Number(role === 'worker' ? 10 : 50),
       };
-      console.log(userPayload);
 
-      // Save user to backend using axios
-      await axios.post((`${import.meta.env.VITE_BACKEND_URL}/api/users`), userPayload);
+      await axiosInstance.post(`/api/users`, userPayload);
 
       Swal.fire({
         icon: 'success',
@@ -47,50 +70,56 @@ const Register = () => {
 
       navigate(location?.state?.from?.pathname || '/');
     } catch (error) {
+      console.error('Registration Error:', error);
       setErrorMessage(error.message);
     }
   };
 
-  //  Google Sign In
   const handleGoogleSignIn = async () => {
   try {
     const result = await GoogleSignIn();
     const signedInUser = result.user;
 
-    console.log('Google signed in user:', signedInUser);
-
     if (!signedInUser.email || !signedInUser.uid) {
       throw new Error('Google user info is incomplete');
     }
 
-    // 1️⃣ Check if user already exists
-    let role = 'worker';
-    let coins = 10;
-    console.log(typeof coins);
+    // 🔍 Check if user already exists in DB
+    const existingRes = await axiosInstance.get(`/api/users/${signedInUser.email}`);
+    const userExists = existingRes.data;
 
-    coins = Number(coins);
+    if (userExists) {
+      // User exists: Don't override anything
+      Swal.fire({
+        icon: 'success',
+        title: 'Signed in with Google',
+        toast: true,
+        position: 'top',
+        timer: 1500,
+        showConfirmButton: false,
+      });
+    } else {
+      // New user: Create with default role 'worker' & coins
+      const userPayload = {
+        uid: signedInUser.uid,
+        name: signedInUser.displayName || 'No Name',
+        email: signedInUser.email,
+        photoUrl: signedInUser.photoURL || null,
+        role: 'worker',
+        coins: 10,
+      };
 
-    const userPayload = {
-      uid: signedInUser.uid,
-      name: signedInUser.displayName || 'No Name',
-      email: signedInUser.email,
-      photoUrl: signedInUser.photoURL || null,
-      role,
-      coins,
-    };
+      await axiosInstance.post(`/api/users`, userPayload);
 
-    console.log('Sending userPayload to backend:', userPayload);
-
-    await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/users`, userPayload);
-
-    Swal.fire({
-      icon: 'success',
-      title: 'Signed in with Google',
-      toast: true,
-      position: 'top',
-      timer: 1500,
-      showConfirmButton: false,
-    }); 
+      Swal.fire({
+        icon: 'success',
+        title: 'Signed in with Google & Registered',
+        toast: true,
+        position: 'top',
+        timer: 1500,
+        showConfirmButton: false,
+      });
+    }
 
     navigate(location?.state?.from?.pathname || '/');
   } catch (error) {
@@ -111,8 +140,8 @@ const Register = () => {
           <label className="label">Email</label>
           <input type="email" name="email" className="input" placeholder="Email" required />
 
-          <label className="label">Photo URL</label>
-          <input type="text" name="photoUrl" className="input py-2" placeholder="Photo URL" />
+          <label className="label">Photo (upload)</label>
+          <input type="file" name="photo" className="file-input w-full" accept="image/*" />
 
           <label className="label">Password</label>
           <input type="password" name="password" className="input" placeholder="Password" required />
@@ -146,4 +175,3 @@ const Register = () => {
 };
 
 export default Register;
-

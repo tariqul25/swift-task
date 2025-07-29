@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import Swal from 'sweetalert2';
+import useAxiosSecure from '../../../hooks/useAxiosSecure';
+import useAxios from '../../../hooks/useAxios';
 
 const ManageUsers = () => {
   const [users, setUsers] = useState([]);
+  const axiosInstance=useAxios()
 
   const fetchUsers = async () => {
     try {
-      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/users`);
+      const res = await axiosInstance.get(`/api/users`);
       setUsers(res.data || []);
     } catch (err) {
       console.error('Failed to fetch users', err);
@@ -29,7 +32,7 @@ const ManageUsers = () => {
 
     if (confirm.isConfirmed) {
       try {
-        const res = await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/users/${email}`);
+        const res = await axiosInstance.delete(`/api/users/${email}`);
         if (res.data.success) {
           Swal.fire('Deleted!', 'User has been deleted.', 'success');
           fetchUsers();
@@ -45,7 +48,7 @@ const ManageUsers = () => {
 
   const handleUpdateRole = async (email, newRole) => {
     try {
-      const res = await axios.patch(`${import.meta.env.VITE_BACKEND_URL}/api/users/${email}`, {
+      const res = await axiosInstance.patch(`/api/users/${email}`, {
         role: newRole,
       });
       if (res.data.success) {

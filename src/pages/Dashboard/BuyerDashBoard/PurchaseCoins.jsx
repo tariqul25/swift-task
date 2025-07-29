@@ -3,9 +3,12 @@ import { Coins, CreditCard } from 'lucide-react';
 import Swal from 'sweetalert2';
 import useAuth from '../../../hooks/useAuth';
 import axios from 'axios';
+import useAxiosSecure from '../../../hooks/useAxiosSecure';
+import useAxios from '../../../hooks/useAxios';
 
 const PurchaseCoins = () => {
   const { user, updateUserCoins, coins } = useAuth();
+  const axiosInstance=useAxios()
 
   const coinPackages = [
     { coins: 10, price: 1, popular: false },
@@ -38,7 +41,7 @@ const PurchaseCoins = () => {
 
     try {
       // Save payment info to backend
-      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/payments`, {
+      await axiosInstance.post(`/api/payments`, {
         email: user.email,
         name: user.displayName,
         coins: coinsToAdd,
@@ -49,7 +52,7 @@ const PurchaseCoins = () => {
       });
       // Update user's coins
       const updatedCoins = (coins || 0) + coinsToAdd;
-      await axios.patch(`${import.meta.env.VITE_BACKEND_URL}/api/users/coins/${user.email}`, {
+      await axiosInstance.patch(`/api/users/coins/${user.email}`, {
         coins: updatedCoins
       });
 

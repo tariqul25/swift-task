@@ -15,6 +15,7 @@ import AddNewTask from "../pages/Dashboard/BuyerDashBoard/AddNewTask";
 import MyTasks from "../pages/Dashboard/BuyerDashBoard/MyTasks";
 import PurchaseCoins from "../pages/Dashboard/BuyerDashBoard/PurchaseCoins";
 import PaymentHistory from "../pages/Dashboard/BuyerDashBoard/PaymentHistory";
+import ErrorPage from "../pages/ErrorPage/ErrorPage";
 
 
 export const router = createBrowserRouter([
@@ -36,10 +37,10 @@ export const router = createBrowserRouter([
   {
     path: "/dashboard",
     element: (
-        <Dashboard />
+      <Dashboard />
     ),
     children: [
-      { index: true, element: <RoleBasedDashboard/> },
+      { index: true, element: <RoleBasedDashboard /> },
 
       { path: "add-task", element: <AddNewTask /> },
       { path: "my-tasks", element: <MyTasks /> },
@@ -54,5 +55,9 @@ export const router = createBrowserRouter([
       { path: "task-list", element: <TaskList /> },
       { path: "withdrawals", element: <Withdrawals /> }
     ]
+  },
+   {
+    path: "*", 
+    element: <ErrorPage />
   }
 ]);

@@ -1,21 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import Swal from 'sweetalert2';
+import useAxiosSecure from '../../../hooks/useAxiosSecure';
+import useAxios from '../../../hooks/useAxios';
 
 const AdminHome = () => {
   const [stats, setStats] = useState({});
   const [withdrawals, setWithdrawals] = useState([]);
+  const axiosInstance=useAxios()
 
   // Load Admin Stats
   const fetchStats = async () => {
-    const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/admin/stats`);
+    const res = await axiosInstance.get(`/api/admin/stats`);
     setStats(res.data);
   };
 
   // Load Pending Withdrawals
    const fetchPending = async () => {
     try {
-      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/pending/withdrawals`);
+      const res = await axiosInstance.get(`/api/pending/withdrawals`);
       setWithdrawals(res.data);
     } catch (err) {
       console.error('Failed to fetch pending withdrawals:', err);
@@ -33,7 +36,7 @@ const AdminHome = () => {
 
     if (confirm.isConfirmed) {
       try {
-        await axios.patch(`${import.meta.env.VITE_BACKEND_URL}/api/withdrawals/approve/${id}`);
+        await axiosInstance.patch(`/api/withdrawals/approve/${id}`);
         Swal.fire('Approved!', 'Withdrawal approved and coins deducted.', 'success');
         fetchPending(); // refresh list
       } catch (err) {
@@ -63,7 +66,7 @@ const AdminHome = () => {
 
   if (confirm.isConfirmed) {
     try {
-      const res = await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/withdrawals/reject/${id}`);
+      const res = await axiosInstance.delete(`/api/withdrawals/reject/${id}`);
       if (res.data.success) {
         Swal.fire('Rejected!', 'Withdrawal has been rejected and deleted.', 'success');
         fetchPending(); // Refresh the pending list

@@ -9,13 +9,17 @@ import {
   signInWithPopup,
   signOut
 } from 'firebase/auth';
+import useAxios from '../hooks/useAxios';
 
 const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
-  const [coins,setCoins]=useState(0)
+  const [coins, setCoins] = useState(0);
+
+  const axiosInstance = useAxios();
+  const provider = new GoogleAuthProvider();
 
   const createUser = (email, password) => {
     return createUserWithEmailAndPassword(auth, email, password);
@@ -31,51 +35,63 @@ const AuthProvider = ({ children }) => {
     return signOut(auth);
   };
 
-  const provider = new GoogleAuthProvider();
-
   const GoogleSignIn = () => {
     return signInWithPopup(auth, provider);
   };
 
-
   const updateUserCoins = (newCoinValue) => {
-  setUser(prev => ({ ...prev, coins: newCoinValue }));
-};
+    setUser(prev => ({ ...prev, coins: newCoinValue }));
+  };
 
-
-  //  Firebase user change hole MongoDB theke role fetch kora
   useEffect(() => {
     const unSubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setLoading(true);
       setUser(currentUser);
-      console.log(currentUser);
 
       if (currentUser?.email) {
         try {
-          const res = await fetch(`https://swift-tasks-zeta.vercel.app/api/users/${currentUser?.email}`);
-          const data = await res.json();
-          console.log(data);
+          const res = await axiosInstance.get(`/api/users/${currentUser.email}`);
 
-          if (res.ok && data?.role && data?.coins) {
+          if (res.status === 200) {
+            const data = res.data;
             setRole(data.role);
-            setCoins(data?.coins)
-          } else {
-            setRole(null);
+            setCoins(data.coins);
           }
-        } catch (err) {
-          console.error('Failed to fetch role:', err.message);
-          setRole(null);
+        } catch (error) {
+          if (error.response && error.response.status === 404) {
+            // User doesn't exist → insert full info to MongoDB
+            const newUser = {
+              uid: currentUser.uid,
+              name: currentUser.displayName || "Unknown",
+              email: currentUser.email,
+              photo: currentUser.photoURL || "",
+              role: "worker",     // default role
+              coins: 0            // default coins
+            };
+
+            try {
+              const createRes = await axiosInstance.post('/api/users', newUser);
+              if (createRes.status === 201 || createRes.status === 200) {
+                const createdUser = createRes.data;
+                setRole(createdUser.role);
+                setCoins(createdUser.coins);
+              }
+            } catch (createError) {
+              console.error('User creation failed:', createError);
+            }
+          } else {
+            console.error('Fetch user error:', error.message);
+          }
         }
       } else {
         setRole(null);
+        setCoins(0);
       }
 
       setLoading(false);
     });
 
-    return () => {
-      unSubscribe();
-    };
+    return () => unSubscribe();
   }, []);
 
   const authInfo = {
@@ -83,7 +99,7 @@ const AuthProvider = ({ children }) => {
     createUser,
     user,
     setUser,
-    role, 
+    role,
     loading,
     setLoading,
     logOut,
