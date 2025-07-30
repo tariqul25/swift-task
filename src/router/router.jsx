@@ -16,6 +16,7 @@ import MyTasks from "../pages/Dashboard/BuyerDashBoard/MyTasks";
 import PurchaseCoins from "../pages/Dashboard/BuyerDashBoard/PurchaseCoins";
 import PaymentHistory from "../pages/Dashboard/BuyerDashBoard/PaymentHistory";
 import ErrorPage from "../pages/ErrorPage/ErrorPage";
+import PrivateRoute from "../routes/PrivateRoute";
 
 
 export const router = createBrowserRouter([
@@ -37,27 +38,27 @@ export const router = createBrowserRouter([
   {
     path: "/dashboard",
     element: (
-      <Dashboard />
+      <PrivateRoute><Dashboard /></PrivateRoute>
     ),
     children: [
       { index: true, element: <RoleBasedDashboard /> },
 
-      { path: "add-task", element: <AddNewTask /> },
-      { path: "my-tasks", element: <MyTasks /> },
-      { path: "purchase", element: <PurchaseCoins /> },
-      { path: "payments", element: <PaymentHistory /> },
+      { path: "add-task", element: <PrivateRoute><AddNewTask /></PrivateRoute> },
+      { path: "my-tasks", element: <PrivateRoute><MyTasks /></PrivateRoute> },
+      { path: "purchase", element: <PrivateRoute><PurchaseCoins /></PrivateRoute> },
+      { path: "payments", element: <PrivateRoute><PaymentHistory /></PrivateRoute> },
 
-      { path: "manage-tasks", element: <ManageTasks /> },
-      { path: "manage-users", element: <MangeUsers /> },
-      { path: "payments", element: <PaymentHistory /> },
+      { path: "manage-tasks", element:  <PrivateRoute><ManageTasks /></PrivateRoute> },
+      { path: "manage-users", element:  <PrivateRoute><MangeUsers /></PrivateRoute> },
+      { path: "payments", element:  <PrivateRoute><PaymentHistory /></PrivateRoute> },
 
-      { path: "my-submission", element: <MySubmissions /> },
-      { path: "task-list", element: <TaskList /> },
-      { path: "withdrawals", element: <Withdrawals /> }
+      { path: "my-submission", element:  <PrivateRoute><MySubmissions /></PrivateRoute> },
+      { path: "task-list", element:  <PrivateRoute><TaskList /></PrivateRoute> },
+      { path: "withdrawals", element:  <PrivateRoute><Withdrawals /></PrivateRoute> }
     ]
   },
-   {
-    path: "*", 
+  {
+    path: "*",
     element: <ErrorPage />
   }
 ]);

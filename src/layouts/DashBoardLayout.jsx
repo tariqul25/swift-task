@@ -117,6 +117,7 @@ const DashboardLayout = ({ children }) => {
           ))}
         </nav>
 
+        <Link to='/'>
         <div className="absolute bottom-0 w-full p-4 border-t">
           <button
             onClick={handleLogout}
@@ -125,7 +126,7 @@ const DashboardLayout = ({ children }) => {
             <LogOut className="w-5 h-5" />
             <span>Logout</span>
           </button>
-        </div>
+        </div></Link>
       </div>
 
       {/* Main Content */}

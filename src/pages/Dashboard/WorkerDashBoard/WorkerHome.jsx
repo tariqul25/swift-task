@@ -7,7 +7,6 @@ import {
   CheckCircle 
 } from 'lucide-react';
 import useAuth from '../../../hooks/useAuth';
-import axios from 'axios';
 import useAxios from '../../../hooks/useAxios';
 
 const WorkerHome = () => {

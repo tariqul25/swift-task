@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Coins, Users, CalendarCheck } from 'lucide-react';
-import axios from 'axios';
 import useAuth from '../../../hooks/useAuth';
-import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import useAxios from '../../../hooks/useAxios';
 
 const TaskList = () => {

@@ -64,6 +64,7 @@ const AuthProvider = ({ children }) => {
     const unSubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setLoading(true);
       setUser(currentUser);
+      console.log(currentUser);
 
       if (currentUser?.email) {
         try {
@@ -82,8 +83,8 @@ const AuthProvider = ({ children }) => {
               name: currentUser.displayName || "Unknown",
               email: currentUser.email,
               photo: currentUser.photoURL || "",
-              role: "worker",     // default role
-              coins: 0            // default coins
+              role: "worker",    
+              coins: 10            
             };
 
             try {

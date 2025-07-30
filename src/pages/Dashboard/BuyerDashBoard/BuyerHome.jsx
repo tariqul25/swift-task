@@ -1,6 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { AuthContext } from '../../../contexts/AuthContext';
-import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import Swal from 'sweetalert2';
 import useAxios from '../../../hooks/useAxios';
 
@@ -10,6 +9,7 @@ const BuyerHome = () => {
 
   const [stats, setStats] = useState({});
   const [submissions, setSubmissions] = useState([]);
+  console.log(submissions);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
 
   // Fetch buyer stats
@@ -26,7 +26,7 @@ const BuyerHome = () => {
   // Fetch pending submissions
   useEffect(() => {
     if (user?.email) {
-      axiosInstance.get(`/api/buyer-submissions?email=${user.email}`)
+      axiosInstance.get(`/api/worker-submission/pending/${user?.email}`)
         .then((res) => {
           setSubmissions(res.data);
         })
@@ -41,7 +41,6 @@ const BuyerHome = () => {
         workerEmail,
         coins,
       });
-
       if (res.data.success) {
         Swal.fire('Approved!', 'Submission has been approved.', 'success');
         // Filter out the approved submission
@@ -55,7 +54,7 @@ const BuyerHome = () => {
   // Reject Submission
   const handleReject = async (submissionId, taskId) => {
     try {
-      const res = await axiosInstance.patch(`/api/submissions/reject/${submissionId}`, {
+      const res = await axiosInstance.delete(`/api/submissions/reject/${submissionId}`, {
         taskId,
       });
 
@@ -105,7 +104,7 @@ const BuyerHome = () => {
             <tbody>
               {submissions.map((s) => (
                 <tr key={s._id}>
-                  <td>{s.worker_name}</td>
+                  <td>{s.buyer_name}</td>
                   <td>{s.task_title}</td>
                   <td>{s.payable_amount}</td>
                   <td>
@@ -158,7 +157,7 @@ const BuyerHome = () => {
             <p><strong>Worker Name:</strong> {selectedSubmission.worker_name}</p>
             <p><strong>Task Title:</strong> {selectedSubmission.task_title}</p>
             <p><strong>Payable:</strong> {selectedSubmission.payable_amount}</p>
-            <p><strong>Submission Text:</strong> {selectedSubmission.submission_text || 'N/A'}</p>
+            <p><strong>Submission Text:</strong> {selectedSubmission.submission_details || 'N/A'}</p>
           </div>
         </div>
       )}

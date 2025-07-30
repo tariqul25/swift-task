@@ -24,6 +24,7 @@ const Register = () => {
     const role = formData.get('role');
     const imageFile = formData.get('photo');
 
+
     setErrorMessage('');
 
     const passRegex = /(?=.*[a-z])(?=.*[A-Z]).{6,}/;
@@ -46,6 +47,7 @@ const Register = () => {
         const imgbbData = await imgbbRes.json();
         if (imgbbData.success) {
           photoUrl = imgbbData.data.url;
+          console.log(photoUrl);
         } else {
           throw new Error('Failed to upload image');
         }
@@ -58,7 +60,7 @@ const Register = () => {
         uid: createdUser.uid,
         name,
         email,
-        photoUrl,
+        photo: photoUrl,
         role,
         coins: role === 'worker' ? 10 : 50,
       };
@@ -135,7 +137,7 @@ const Register = () => {
     <div className="min-h-screen bg-base-200 flex items-center justify-center px-4">
       <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-xl shadow-lg">
         <h2 className="text-3xl font-bold text-center">Create Account</h2>
-        
+
         <form onSubmit={handleRegister} className="space-y-4">
           <div>
             <label className="label font-medium">Full Name</label>
@@ -189,4 +191,3 @@ const Register = () => {
 };
 
 export default Register;
-

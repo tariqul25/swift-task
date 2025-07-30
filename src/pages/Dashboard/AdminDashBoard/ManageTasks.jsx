@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Trash2 } from 'lucide-react';
-import axios from 'axios';
 import Swal from 'sweetalert2';
-import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import useAxios from '../../../hooks/useAxios';
 
 const ManageTasks = () => {
