@@ -13,7 +13,7 @@ const ErrorPage = () => {
           Return to Home
         </a>
       </div>
-    </div>
+    </div> 
   );
 };
 

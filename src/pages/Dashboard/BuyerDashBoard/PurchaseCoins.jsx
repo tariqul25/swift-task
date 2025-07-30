@@ -2,12 +2,10 @@ import React from 'react';
 import { Coins, CreditCard } from 'lucide-react';
 import Swal from 'sweetalert2';
 import useAuth from '../../../hooks/useAuth';
-import axios from 'axios';
-import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import useAxios from '../../../hooks/useAxios';
 
 const PurchaseCoins = () => {
-  const { user, updateUserCoins, coins } = useAuth();
+  const { user, updateUserCoins, coins,fetchUser } = useAuth();
   const axiosInstance=useAxios()
 
   const coinPackages = [
@@ -58,6 +56,7 @@ const PurchaseCoins = () => {
 
       // Update local state/context
       updateUserCoins(updatedCoins);
+      await fetchUser();
 
       Swal.fire({
         title: 'Success!',

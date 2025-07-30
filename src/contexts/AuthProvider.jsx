@@ -43,6 +43,23 @@ const AuthProvider = ({ children }) => {
     setUser(prev => ({ ...prev, coins: newCoinValue }));
   };
 
+
+  const fetchUser = async () => {
+    if (!user?.email) return;
+    try {
+      const res = await axiosInstance.get(`/api/users/${user.email}`);
+      setUser(res.data);
+      setCoins(res.data.coins || 0);
+    } catch (error) {
+      console.error('Failed to fetch user:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchUser();
+  }, [user?.email]);
+
+
   useEffect(() => {
     const unSubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setLoading(true);
@@ -110,7 +127,8 @@ const AuthProvider = ({ children }) => {
     isWorker: role === 'worker',
     coins,
     setCoins,
-    updateUserCoins
+    updateUserCoins,
+    fetchUser
   };
 
   return (

@@ -1,198 +1,219 @@
-import React, { useContext, useState } from 'react';
-import { AuthContext } from '../../../contexts/AuthContext';
-import useAxiosSecure from '../../../hooks/useAxiosSecure';
+import React, { useState } from 'react';
 import Swal from 'sweetalert2';
+import { Plus, DollarSign } from 'lucide-react';
+import useAuth from '../../../hooks/useAuth';
 import axios from 'axios';
-import useAxios from '../../../hooks/useAxios';
 
 const AddNewTask = () => {
-  const { user } = useContext(AuthContext);
-  const axiosInstance = useAxios();
-
+  const { user, coins, fetchUser } = useAuth(); // 🔁 fetchUser for instant update
   const [formData, setFormData] = useState({
     task_title: '',
-    task_description: '',
-    task_category: '',
+    task_detail: '',
     required_workers: '',
-    reward_per_worker: '',
-    task_image_url: '',
-    completion_date: '', // added here
+    payable_amount: '',
+    completion_date: '',
+    submission_info: '',
+    task_image_url: ''
   });
 
-  const [imageFile, setImageFile] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
 
-    let uploadedImageUrl = formData.task_image_url;
+    const totalPayableAmount =
+      parseInt(formData.required_workers) * parseInt(formData.payable_amount);
 
-    if (imageFile) {
-      const imageData = new FormData();
-      imageData.append('image', imageFile);
-      try {
-        const imgbbAPIKey = import.meta.env.VITE_API_KEY;
-        const res = await axios.post(`https://api.imgbb.com/1/upload?key=${imgbbAPIKey}`, imageData);
-        uploadedImageUrl = res.data?.data?.url;
-      } catch (err) {
-        console.error('Image Upload Failed:', err);
-        Swal.fire({
-          icon: 'error',
-          title: 'Image Upload Failed',
-          text: 'Please try again or provide an image URL instead.',
-        });
-        setLoading(false);
-        return;
-      }
+    if (totalPayableAmount > (coins || 0)) {
+      Swal.fire({
+        title: 'Insufficient Coins',
+        text: 'Not enough coins. Please purchase more.',
+        icon: 'warning',
+        confirmButtonText: 'Purchase Coins'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          window.location.href = '/dashboard/purchase';
+        }
+      });
+      return;
     }
-
-    const totalCost = Number(formData.reward_per_worker) * Number(formData.required_workers);
 
     const newTask = {
       ...formData,
-      task_image_url: uploadedImageUrl,
       buyer_email: user?.email,
       buyer_name: user?.displayName,
       buyer_id: user?.uid || user?.id,
-      total_cost: totalCost,
+      total_cost: totalPayableAmount,
       status: 'active',
       created_date: new Date().toISOString(),
     };
 
     try {
-      const res = await axiosInstance.post('/api/tasks', newTask);
-      if (res.data?.insertedId) {
+      // ✅ 1. Create Task
+      const taskRes = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/api/tasks`,
+        newTask
+      );
+
+      // ✅ 2. Deduct Coins
+      if (taskRes.data.insertedId) {
+        await axios.patch(
+          `${import.meta.env.VITE_BACKEND_URL}/api/users/coins/${user?.email}`,
+          { coins: coins - totalPayableAmount }
+        );
+        // ✅ 3. Refetch user to update coin instantly
+        if (typeof fetchUser === 'function') {
+          await fetchUser();
+        }
+
         Swal.fire({
           icon: 'success',
-          title: 'Task Created',
-          text: 'Your task was successfully created!',
+          title: 'Task Created!',
+          text: 'Task created and coins deducted successfully!'
         });
-        setFormData({
-          task_title: '',
-          task_description: '',
-          task_category: '',
-          required_workers: '',
-          reward_per_worker: '',
-          completion_date: '', // reset
-        });
-        setImageFile(null);
       }
-    } catch (error) {
-      console.error('Task creation failed:', error);
+    } catch (err) {
+      console.error("Task creation or coin update error:", err);
       Swal.fire({
         icon: 'error',
         title: 'Error',
         text: 'Something went wrong while creating the task.',
       });
-    } finally {
-      setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white shadow rounded-xl mt-8">
-      <h2 className="text-2xl font-bold mb-4 text-center text-blue-600">Add New Task</h2>
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Task Title</label>
-          <input
-            type="text"
-            name="task_title"
-            value={formData.task_title}
-            onChange={handleInputChange}
-            required
-            className="w-full px-4 py-2 border rounded-lg"
-          />
-        </div>
+    <div className="space-y-6">
+      <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg p-6 text-white">
+        <h1 className="text-3xl font-bold mb-2">Add New Task</h1>
+        <p className="text-purple-100">Create a new task for workers to complete</p>
+      </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Category</label>
-          <input
-            type="text"
-            name="task_category"
-            value={formData.task_category}
-            onChange={handleInputChange}
-            required
-            className="w-full px-4 py-2 border rounded-lg"
-          />
-        </div>
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Title & Image URL */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label htmlFor="task_title" className="block text-sm font-medium text-gray-700 mb-2">Task Title *</label>
+              <input
+                type="text"
+                id="task_title"
+                name="task_title"
+                value={formData.task_title}
+                onChange={handleChange}
+                required
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label htmlFor="task_image_url" className="block text-sm font-medium text-gray-700 mb-2">Task Image URL</label>
+              <input
+                type="url"
+                id="task_image_url"
+                name="task_image_url"
+                value={formData.task_image_url}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
 
-        <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700">Task Description</label>
-          <textarea
-            name="task_description"
-            value={formData.task_description}
-            onChange={handleInputChange}
-            rows="4"
-            required
-            className="w-full px-4 py-2 border rounded-lg"
-          />
-        </div>
+          {/* Details */}
+          <div>
+            <label htmlFor="task_detail" className="block text-sm font-medium text-gray-700 mb-2">Task Details *</label>
+            <textarea
+              id="task_detail"
+              name="task_detail"
+              value={formData.task_detail}
+              onChange={handleChange}
+              required
+              rows="4"
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            ></textarea>
+          </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Required Workers</label>
-          <input
-            type="number"
-            name="required_workers"
-            value={formData.required_workers}
-            onChange={handleInputChange}
-            required
-            className="w-full px-4 py-2 border rounded-lg"
-          />
-        </div>
+          {/* Workers, Pay, Completion */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <label htmlFor="required_workers" className="block text-sm font-medium text-gray-700 mb-2">Required Workers *</label>
+              <input
+                type="number"
+                id="required_workers"
+                name="required_workers"
+                value={formData.required_workers}
+                onChange={handleChange}
+                required
+                className="w-full px-4 py-2 border rounded-lg"
+              />
+            </div>
+            <div>
+              <label htmlFor="payable_amount" className="block text-sm font-medium text-gray-700 mb-2">Payable Amount *</label>
+              <input
+                type="number"
+                id="payable_amount"
+                name="payable_amount"
+                value={formData.payable_amount}
+                onChange={handleChange}
+                required
+                className="w-full px-4 py-2 border rounded-lg"
+              />
+            </div>
+            <div>
+              <label htmlFor="completion_date" className="block text-sm font-medium text-gray-700 mb-2">Completion Date *</label>
+              <input
+                type="date"
+                id="completion_date"
+                name="completion_date"
+                value={formData.completion_date}
+                onChange={handleChange}
+                required
+                className="w-full px-4 py-2 border rounded-lg"
+              />
+            </div>
+          </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Reward per Worker</label>
-          <input
-            type="number"
-            name="reward_per_worker"
-            value={formData.reward_per_worker}
-            onChange={handleInputChange}
-            required
-            className="w-full px-4 py-2 border rounded-lg"
-          />
-        </div>
+          {/* Submission */}
+          <div>
+            <label htmlFor="submission_info" className="block text-sm font-medium text-gray-700 mb-2">Submission Info *</label>
+            <textarea
+              id="submission_info"
+              name="submission_info"
+              value={formData.submission_info}
+              onChange={handleChange}
+              required
+              rows="3"
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            ></textarea>
+          </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Completion Date</label>
-          <input
-            type="date"
-            name="completion_date"
-            value={formData.completion_date}
-            onChange={handleInputChange}
-            required
-            className="w-full px-4 py-2 border rounded-lg"
-          />
-        </div>
+          {/* Coin Info */}
+          {formData.required_workers && formData.payable_amount && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center space-x-2">
+                <DollarSign className="w-5 h-5 text-blue-600" />
+                <span className="font-medium text-blue-800">
+                  Total Cost: {parseInt(formData.required_workers) * parseInt(formData.payable_amount)} coins
+                </span>
+              </div>
+              <p className="text-sm text-blue-600 mt-1">Your current balance: {coins || 0} coins</p>
+            </div>
+          )}
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Upload Task Image</label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setImageFile(e.target.files[0])}
-            className="w-full px-4 py-2 border rounded-lg"
-          />
-        </div>
-
-        
-
-        <div className="md:col-span-2 text-center">
+          {/* Submit */}
           <button
             type="submit"
-            disabled={loading}
-            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold"
+            className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
           >
-            {loading ? 'Creating...' : 'Create Task'}
+            <Plus className="w-5 h-5" />
+            <span>Add Task</span>
           </button>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
 };
