@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { 
-  Home, 
-  List, 
-  Plus, 
-  FileText, 
-  CreditCard, 
-  Users, 
+import {
+  Home,
+  List,
+  Plus,
+  FileText,
+  CreditCard,
+  Users,
   Settings,
   Bell,
   Menu,
@@ -13,23 +13,25 @@ import {
   Coins,
   LogOut
 } from 'lucide-react';
-import { Link, useNavigate, useLocation } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import useAuth from '../hooks/useAuth';
 
 const DashboardLayout = ({ children }) => {
-  const { user, logOut,role,coins} = useAuth();
+  const { user, logOut, role, coins } = useAuth();
+  console.log(user);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
-  const navigate = useNavigate();
   const location = useLocation();
+  const navigate = useNavigate()
 
-  const handleLogout = () => {
-    logOut();
+  const handleLogout = async () => {
+     await logOut();
+
     navigate('/');
   };
 
-  {/*Dashboard page sidebar routing path */}
+  {/*Dashboard page sidebar routing path */ }
   const getNavigationItems = () => {
     switch (role) {
       case 'worker':
@@ -63,9 +65,8 @@ const DashboardLayout = ({ children }) => {
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform ${
-        isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      } transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}>
+      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        } transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}>
         <div className="flex items-center justify-between h-16 px-4 border-b">
           <div className="flex items-center space-x-2">
             <div className="block md:hidden w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg items-center justify-center">
@@ -87,18 +88,19 @@ const DashboardLayout = ({ children }) => {
               <Coins className="w-4 h-4 text-yellow-600" />
               <span className="text-yellow-800 font-medium">{coins || 0}</span>
             </div>
-            <div className="flex items-center space-x-2">
-              <img 
-                src={user?.photoURL || '/placeholder.svg'} 
-                alt={user?.displayName}
+            <div className="flex justify-between items-center space-x-2">
+              <img
+                src={user?.photoUrl || '/placeholder.svg'}
+                alt={user?.name}
                 className="w-8 h-8 rounded-full object-cover"
               />
+              <p className="text-xs text-gray-500 capitalize">{role}</p>
             </div>
           </div>
-          <div className="mt-2">
-            <p className="text-sm font-medium text-gray-900">{user?.displayName}</p>
+          {/* <div className="mt-2">
+            <p className="text-sm font-medium text-gray-900">{user?.photoUrl}</p>
             <p className="text-xs text-gray-500 capitalize">{role}</p>
-          </div>
+          </div> */}
         </div>
 
         <nav className="mt-4">
@@ -106,9 +108,8 @@ const DashboardLayout = ({ children }) => {
             <Link
               key={item.path}
               to={item.path}
-              className={`flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors ${
-                location.pathname === item.path ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600' : ''
-              }`}
+              className={`flex items-center space-x-3 px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors ${location.pathname === item.path ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600' : ''
+                }`}
               onClick={() => setIsSidebarOpen(false)}
             >
               <item.icon className="w-5 h-5" />
@@ -117,16 +118,16 @@ const DashboardLayout = ({ children }) => {
           ))}
         </nav>
 
-        <Link to='/'>
+
         <div className="absolute bottom-0 w-full p-4 border-t">
           <button
             onClick={handleLogout}
-            className="flex items-center space-x-3 w-full px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 hover:rounded-lg flex items-center gap-2"
           >
-            <LogOut className="w-5 h-5" />
-            <span>Logout</span>
+            <LogOut className="w-4 h-4" />
+            Logout
           </button>
-        </div></Link>
+        </div>
       </div>
 
       {/* Main Content */}
@@ -142,7 +143,7 @@ const DashboardLayout = ({ children }) => {
               >
                 <Menu className="w-6 h-6" />
               </button>
-              
+
               {/* Logo - visible on larger screens */}
               <div className=" md:hidden lg:flex items-center space-x-2">
                 <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
@@ -151,7 +152,7 @@ const DashboardLayout = ({ children }) => {
                 <span className="text-xl font-bold text-gray-800">SwiftTasks</span>
               </div>
             </div>
-            
+
             {/* Right side - User info and notifications */}
             <div className="flex items-center space-x-4">
               {/* User coins and info */}
@@ -160,24 +161,24 @@ const DashboardLayout = ({ children }) => {
                   <Coins className="w-4 h-4 text-yellow-600" />
                   <span className="text-yellow-800 font-medium">{coins || 0}</span>
                 </div>
-                
+
                 <div className="h-6 w-px bg-gray-300"></div>
-                
+
                 <div className="flex items-center space-x-2">
-                  <img 
-                    src={user?.photoURL || '/placeholder.svg'} 
-                    alt={user?.displayName}
+                  <img
+                    src={user?.photoUrl || '/placeholder.svg'}
+                    alt={user?.name}
                     className="w-8 h-8 rounded-full object-cover"
                   />
                   <div className="hidden md:block">
                     <p className="text-sm text-gray-500 capitalize">{role}</p>
-                    <p className="text-sm font-medium text-gray-900">{user?.displayName}</p>
+                    <p className="text-sm font-medium text-gray-900">{user?.name}</p>
                   </div>
                 </div>
-                
+
                 <div className="h-6 w-px bg-gray-300"></div>
               </div>
-              
+
               {/* Notifications */}
               <div className="relative">
                 <button
@@ -191,7 +192,7 @@ const DashboardLayout = ({ children }) => {
                     </span>
                   )}
                 </button>
-                
+
                 {showNotifications && (
                   <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border py-2 z-50">
                     <div className="px-4 py-2 border-b">
@@ -226,7 +227,7 @@ const DashboardLayout = ({ children }) => {
 
       {/* Sidebar Overlay for Mobile */}
       {isSidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
           onClick={() => setIsSidebarOpen(false)}
         />

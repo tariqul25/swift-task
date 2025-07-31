@@ -1,11 +1,12 @@
-import React, { useContext, useState } from 'react';
+import React, { useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { Coins, User, LogOut, Menu, X, Code } from 'lucide-react';
-import { AuthContext } from '../../../contexts/AuthContext';
+import useAuth from '../../../hooks/useAuth';
 
 const Navbar = () => {
-  const { user, logOut ,role,coins} = useContext(AuthContext);
-  console.log(role);
+  const { user, logOut ,role,coins} = useAuth();
+  console.log(user?.photoUrl);
+  console.log(user);
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -57,11 +58,11 @@ const Navbar = () => {
                     className="flex items-center gap-2 hover:text-blue-600"
                   >
                     <img
-                      src={user.photoURL || '/placeholder.svg'}
+                      src={user.photoUrl || '/placeholder.svg'}
                       className="w-8 h-8 rounded-full object-cover"
                       alt="User"
                     />
-                    <span>{user.displayName}</span>
+                    <span>{user.name}</span>
                   </button>
                   {isProfileOpen && (
                     <div className="absolute right-0 mt-2 w-48 bg-white border rounded-lg shadow z-50">
@@ -70,7 +71,7 @@ const Navbar = () => {
                       </div>
                       <button
                         onClick={handleLogout}
-                        className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 flex items-center gap-2"
+                        className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 hover:rounded-lg flex items-center gap-2"
                       >
                         <LogOut className="w-4 h-4" />
                         Logout

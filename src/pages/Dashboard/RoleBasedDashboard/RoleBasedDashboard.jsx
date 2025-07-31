@@ -7,7 +7,6 @@ import AdminHome from '../AdminDashBoard/AdminHome';
 
 const RoleBasedDashboard = () => {
   const { role } = useAuth();
-  console.log(role);
 
   if (role === 'worker') return <WorkerHome />;
   if (role === 'buyer') return <BuyerHome />;

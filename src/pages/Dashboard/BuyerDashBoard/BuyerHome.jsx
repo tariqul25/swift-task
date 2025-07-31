@@ -9,7 +9,6 @@ const BuyerHome = () => {
 
   const [stats, setStats] = useState({});
   const [submissions, setSubmissions] = useState([]);
-  console.log(submissions);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
 
   // Fetch buyer stats
