@@ -1,24 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
 import Swal from 'sweetalert2';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
-import useAxios from '../../../hooks/useAxios';
 
 const AdminHome = () => {
   const [stats, setStats] = useState({});
   const [withdrawals, setWithdrawals] = useState([]);
-  const axiosInstance=useAxios()
+  const axiosSecure= useAxiosSecure()
 
   // Load Admin Stats
   const fetchStats = async () => {
-    const res = await axiosInstance.get(`/api/admin/stats`);
+    const res = await axiosSecure.get(`/api/admin/stats`);
     setStats(res.data);
   };
 
   // Load Pending Withdrawals
    const fetchPending = async () => {
     try {
-      const res = await axiosInstance.get(`/api/pending/withdrawals`);
+      const res = await axiosSecure.get(`/api/pending/withdrawals`);
       setWithdrawals(res.data);
     } catch (err) {
       console.error('Failed to fetch pending withdrawals:', err);
@@ -36,7 +34,7 @@ const AdminHome = () => {
 
     if (confirm.isConfirmed) {
       try {
-        await axiosInstance.patch(`/api/withdrawals/approve/${id}`);
+        await axiosSecure.patch(`/api/withdrawals/approve/${id}`);
         Swal.fire('Approved!', 'Withdrawal approved and coins deducted.', 'success');
         fetchPending(); // refresh list
       } catch (err) {
@@ -66,7 +64,7 @@ const AdminHome = () => {
 
   if (confirm.isConfirmed) {
     try {
-      const res = await axiosInstance.delete(`/api/withdrawals/reject/${id}`);
+      const res = await axiosSecure.delete(`/api/withdrawals/reject/${id}`);
       if (res.data.success) {
         Swal.fire('Rejected!', 'Withdrawal has been rejected and deleted.', 'success');
         fetchPending(); // Refresh the pending list

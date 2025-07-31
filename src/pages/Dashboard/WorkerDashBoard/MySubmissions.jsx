@@ -2,10 +2,12 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { AuthContext } from '../../../contexts/AuthContext';
 import useAxios from '../../../hooks/useAxios';
+import useAxiosSecure from '../../../hooks/useAxiosSecure';
 
 const MySubmissions = () => {
   const { user } = useContext(AuthContext);
   const axiosInstance = useAxios();
+  const axiosSecure=useAxiosSecure()
 
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,7 +20,7 @@ const MySubmissions = () => {
     if (!user?.email) return;
 
     setLoading(true);
-    axiosInstance
+    axiosSecure
       .get(`/api/submissions/${user.email}?page=${currentPage}&limit=${submissionsPerPage}`)
       .then(res => {
         setSubmissions(res.data.submissions);

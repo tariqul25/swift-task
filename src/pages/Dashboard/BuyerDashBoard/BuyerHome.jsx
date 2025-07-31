@@ -2,10 +2,12 @@ import React, { useContext, useEffect, useState } from 'react';
 import { AuthContext } from '../../../contexts/AuthContext';
 import Swal from 'sweetalert2';
 import useAxios from '../../../hooks/useAxios';
+import useAxiosSecure from '../../../hooks/useAxiosSecure';
 
 const BuyerHome = () => {
   const { user } = useContext(AuthContext);
   const axiosInstance = useAxios();
+  const axiosSecure=useAxiosSecure()
 
   const [stats, setStats] = useState({});
   const [submissions, setSubmissions] = useState([]);
@@ -14,7 +16,7 @@ const BuyerHome = () => {
   // Fetch buyer stats
   useEffect(() => {
     if (user?.email) {
-      axiosInstance.get(`/api/buyer-stats?email=${user.email}`)
+      axiosSecure.get(`/api/buyer-stats?email=${user.email}`)
         .then((res) => {
           setStats(res.data);
         })
@@ -25,7 +27,7 @@ const BuyerHome = () => {
   // Fetch pending submissions
   useEffect(() => {
     if (user?.email) {
-      axiosInstance.get(`/api/worker-submission/pending/${user?.email}`)
+      axiosSecure.get(`/api/worker-submission/pending/${user?.email}`)
         .then((res) => {
           setSubmissions(res.data);
         })
@@ -36,7 +38,7 @@ const BuyerHome = () => {
   // Approve Submission
   const handleApprove = async (submissionId, workerEmail, coins) => {
     try {
-      const res = await axiosInstance.patch(`/api/submissions/approve/${submissionId}`, {
+      const res = await axiosSecure.patch(`/api/submissions/approve/${submissionId}`, {
         workerEmail,
         coins,
       });
@@ -53,7 +55,7 @@ const BuyerHome = () => {
   // Reject Submission
   const handleReject = async (submissionId, taskId) => {
     try {
-      const res = await axiosInstance.delete(`/api/submissions/reject/${submissionId}`, {
+      const res = await axiosSecure.delete(`/api/submissions/reject/${submissionId}`, {
         taskId,
       });
 

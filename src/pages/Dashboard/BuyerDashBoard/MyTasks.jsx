@@ -10,11 +10,11 @@ const MyTasks = () => {
   // console.log(user);
   const [tasks, setTasks] = useState([]);
   const [editingTask, setEditingTask] = useState(null);
-  const axiosInstance=useAxios()
+  const axiosSecure= useAxiosSecure()
 
   const fetchTasks = async () => {
     try {
-      const res = await axiosInstance.get(`/api/tasks/user/${user.email}`);
+      const res = await axiosSecure.get(`/api/tasks/user/${user.email}`);
       // Sort by descending completion_date
       const sorted = res.data.sort((a, b) => new Date(b.completion_date) - new Date(a.completion_date));
       setTasks(sorted);
@@ -31,7 +31,7 @@ const MyTasks = () => {
 
   const handleUpdate = async () => {
     try {
-      const res = await axiosInstance.patch(`/api/tasks/${editingTask._id}`, {
+      const res = await axiosSecure.patch(`/api/tasks/${editingTask._id}`, {
         task_title: editingTask.task_title,
         task_detail: editingTask.task_detail,
         submission_info: editingTask.submission_info,
@@ -57,7 +57,7 @@ const MyTasks = () => {
   if (!confirm.isConfirmed) return;
 
   try {
-    await axiosInstance.delete(`/api/tasks/${task._id}`);
+    await axiosSecure.delete(`/api/tasks/${task._id}`);
 
     Swal.fire('Deleted!', 'Task has been deleted.', 'success');
     fetchTasks();

@@ -3,11 +3,13 @@ import { Coins, CreditCard } from 'lucide-react';
 import Swal from 'sweetalert2';
 import useAuth from '../../../hooks/useAuth';
 import useAxios from '../../../hooks/useAxios';
+import useAxiosSecure from '../../../hooks/useAxiosSecure';
 
 const PurchaseCoins = () => {
   const { user, updateUserCoins, coins,fetchUser } = useAuth();
   const axiosInstance=useAxios()
-
+  const axiosSecure= useAxiosSecure()
+  
   const coinPackages = [
     { coins: 10, price: 1, popular: false },
     { coins: 150, price: 10, popular: false },
@@ -15,7 +17,7 @@ const PurchaseCoins = () => {
     { coins: 1000, price: 35, popular: false }
   ];
 
-  const handleDummyPayment = async (coinPackage) => {
+  const handlePayment = async (coinPackage) => {
     const { coins: coinsToAdd, price } = coinPackage;
 
     // Confirm purchase
@@ -39,7 +41,7 @@ const PurchaseCoins = () => {
 
     try {
       // Save payment info to backend
-      await axiosInstance.post(`/api/payments`, {
+      await axiosSecure.post(`/api/payments`, {
         email: user.email,
         name: user.displayName,
         coins: coinsToAdd,
@@ -50,7 +52,7 @@ const PurchaseCoins = () => {
       });
       // Update user's coins
       const updatedCoins = (coins || 0) + coinsToAdd;
-      await axiosInstance.patch(`/api/users/coins/${user.email}`, {
+      await axiosSecure.patch(`/api/users/coins/${user.email}`, {
         coins: updatedCoins
       });
 
@@ -121,7 +123,7 @@ const PurchaseCoins = () => {
               </div>
 
               <button
-                onClick={() => handleDummyPayment(pkg)}
+                onClick={() => handlePayment(pkg)}
                 className="w-full py-3 px-4 rounded-lg font-medium bg-yellow-600 text-white hover:bg-yellow-700 transition-colors flex items-center justify-center space-x-2"
               >
                 <CreditCard className="w-4 h-4" />

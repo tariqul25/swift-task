@@ -9,7 +9,7 @@ import {
   signInWithPopup,
   signOut,
 } from 'firebase/auth';
-import useAxios from '../hooks/useAxios';  
+import useAxios from '../hooks/useAxios';
 
 const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -65,17 +65,30 @@ const AuthProvider = ({ children }) => {
   useEffect(() => {
     const unSubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setLoading(true);
-      setUser(currentUser);
-      console.log(currentUser);
 
       if (currentUser?.email) {
         try {
+           const idToken = await currentUser.getIdToken();
+
           const res = await axiosInstance.get(`/api/users/${currentUser.email}`);
 
           if (res.status === 200) {
-            const data = res.data;
-            setRole(data.role);
-            setCoins(data.coins);
+            const dbUser = res.data;
+
+            const mergedUser = {
+              uid: currentUser.uid,
+              email: currentUser.email,
+              name: currentUser.displayName || dbUser.name,
+              photo: currentUser.photoURL || dbUser.photo,
+              role: dbUser.role,
+              coins: dbUser.coins,
+              idToken: idToken,
+            };
+
+            setUser(mergedUser);
+            setRole(dbUser.role);
+            setCoins(dbUser.coins);
+            console.log("Merged User:", mergedUser);
           }
         } catch (error) {
           if (error.response && error.response.status === 404) {
@@ -88,11 +101,11 @@ const AuthProvider = ({ children }) => {
               role: "worker",
               coins: 10
             };
-d
             try {
               const createRes = await axiosInstance.post('/api/users', newUser);
               if (createRes.status === 201 || createRes.status === 200) {
                 const createdUser = createRes.data;
+                setUser(newUser);
                 setRole(createdUser.role);
                 setCoins(createdUser.coins);
               }

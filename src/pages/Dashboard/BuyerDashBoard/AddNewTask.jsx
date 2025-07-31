@@ -3,6 +3,7 @@ import Swal from 'sweetalert2';
 import { Plus, DollarSign } from 'lucide-react';
 import useAuth from '../../../hooks/useAuth';
 import axios from 'axios';
+import useAxiosSecure from '../../../hooks/useAxiosSecure';
 
 const AddNewTask = () => {
   const { user, coins, fetchUser } = useAuth(); // 🔁 fetchUser for instant update
@@ -15,6 +16,7 @@ const AddNewTask = () => {
     submission_info: '',
     task_image_url: ''
   });
+  const axiosSecure=useAxiosSecure()
 
   const handleChange = (e) => {
     setFormData({
@@ -55,14 +57,14 @@ const AddNewTask = () => {
 
     try {
       // ✅ 1. Create Task
-      const taskRes = await axios.post(
+      const taskRes = await axiosSecure.post(
         `${import.meta.env.VITE_BACKEND_URL}/api/tasks`,
         newTask
       );
 
       // ✅ 2. Deduct Coins
       if (taskRes.data.insertedId) {
-        await axios.patch(
+        await axiosSecure.patch(
           `${import.meta.env.VITE_BACKEND_URL}/api/users/coins/${user?.email}`,
           { coins: coins - totalPayableAmount }
         );

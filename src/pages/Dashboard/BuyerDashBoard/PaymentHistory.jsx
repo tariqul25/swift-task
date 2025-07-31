@@ -8,10 +8,10 @@ import useAxios from '../../../hooks/useAxios';
 const PaymentHistory = () => {
   const { user } = useAuth();
   const [payments, setPayments] = useState([]);
-  const axiosInstance=useAxios()
+  const axiosSecure= useAxiosSecure()
   useEffect(() => {
     if (user?.email) {
-      axiosInstance.get(`/api/payments/${user.email}`)
+      axiosSecure.get(`/api/payments/${user.email}`)
         .then(res => {
           setPayments(res.data);
         })

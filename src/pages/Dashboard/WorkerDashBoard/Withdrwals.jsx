@@ -10,7 +10,7 @@ const Withdrawal = () => {
   const [paymentSystem, setPaymentSystem] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
-  const axiosInstance=useAxios()
+  const axiosSecure= useAxiosSecure()
 
   const handleWithdraw = async (e) => {
     e.preventDefault();
@@ -38,7 +38,7 @@ const Withdrawal = () => {
     };
 
     try {
-      const res = await axiosInstance.post(`/api/withdrawals`, withdrawalData);
+      const res = await axiosSecure.post(`/api/withdrawals`, withdrawalData);
       if (res.data?.result?.insertedId) {
         Swal.fire('Success', 'Your withdrawal request has been submitted.', 'success');
         setWithdrawAmount('');

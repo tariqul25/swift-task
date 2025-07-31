@@ -4,6 +4,7 @@ import Swal from 'sweetalert2';
 import { AuthContext } from '../../../contexts/AuthContext';
 import { updateProfile } from 'firebase/auth';
 import useAxios from '../../../hooks/useAxios';
+import useAxiosSecure from '../../../hooks/useAxiosSecure';
 
 const imgbbApiKey = import.meta.env.VITE_API_KEY;
 const imgbbUploadUrl = `https://api.imgbb.com/1/upload?key=${imgbbApiKey}`;
@@ -13,6 +14,7 @@ const Register = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const axiosInstance = useAxios();
+  const axiosSecure=useAxiosSecure
 
   const handleRegister = async (e) => {
     e.preventDefault();

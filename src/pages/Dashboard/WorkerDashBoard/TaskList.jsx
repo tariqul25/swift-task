@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Coins, Users, CalendarCheck } from 'lucide-react';
 import useAuth from '../../../hooks/useAuth';
 import useAxios from '../../../hooks/useAxios';
+import useAxiosSecure from '../../../hooks/useAxiosSecure';
 
 const TaskList = () => {
   const { user } = useAuth();
@@ -11,9 +12,10 @@ const TaskList = () => {
   const [submissionDetails, setSubmissionDetails] = useState('');
   const [loading, setLoading] = useState(true);
   const axiosInstance=useAxios()
+  const axiosSecure= useAxiosSecure()
 
   useEffect(() => {
-    axiosInstance
+    axiosSecure
       .get(`/api/tasks`)
       .then(res => {
         setTasks(res.data);
@@ -28,7 +30,7 @@ const TaskList = () => {
  useEffect(() => {
   if (!user?.email) return;
 
-  axiosInstance.get(`/api/submitted-task-ids/${user.email}`)
+  axiosSecure.get(`/api/submitted-task-ids/${user.email}`)
     .then(res => {
       setSubmittedTaskIds(res.data); // ⬅️ this must be set correctly
     })
@@ -51,7 +53,7 @@ const TaskList = () => {
       status: 'pending'
     };
     try {
-      await axiosInstance.post(`/api/apply-task`, doc);
+      await axiosSecure.post(`/api/apply-task`, doc);
       setSubmittedTaskIds(prev => [...prev, selectedTask._id]);
       setSelectedTask(null);
       setSubmissionDetails('');
