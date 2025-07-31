@@ -6,7 +6,7 @@ import useAuth from '../../../hooks/useAuth';
 const Navbar = () => {
   const { user, logOut ,role,coins} = useAuth();
   console.log(user?.photoUrl);
-  console.log(user);
+  console.log(role);
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -117,11 +117,11 @@ const Navbar = () => {
                   </li>
                   <li className="flex items-center gap-2">
                     <img
-                      src={user.photoURL || '/placeholder.svg'}
+                      src={user?.photoURL || '/placeholder.svg'}
                       className="w-6 h-6 rounded-full object-cover"
                       alt="User"
                     />
-                    <span>{user.displayName} ({user.role})</span>
+                    <span>{user?.displayName} ({user.role})</span>
                   </li>
                   <li>
                     <button onClick={handleLogout} className="text-red-600 hover:text-red-700">Logout</button>

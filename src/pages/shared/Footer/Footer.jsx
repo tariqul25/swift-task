@@ -14,7 +14,7 @@ const Footer = () => {
                     {/* Social Media Links */}
                     <div className="flex space-x-6">
                         <a
-                            href="https://github.com/your-username"
+                            href="https://github.com/tariqul25"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-gray-400 hover:text-white transition-colors"
@@ -22,7 +22,7 @@ const Footer = () => {
                             <Github className="w-6 h-6" />
                         </a>
                         <a
-                            href="https://linkedin.com/in/your-profile"
+                            href="https://www.linkedin.com/in/tariqul25/"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-gray-400 hover:text-white transition-colors"
@@ -30,7 +30,7 @@ const Footer = () => {
                             <Linkedin className="w-6 h-6" />
                         </a>
                         <a
-                            href="https://facebook.com/your-profile"
+                            href="https://www.facebook.com/tariqul25"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-gray-400 hover:text-white transition-colors"
@@ -38,7 +38,7 @@ const Footer = () => {
                             <Facebook className="w-6 h-6" />
                         </a>
                         <a
-                            href="https://twitter.com/your-profile"
+                            href="https://x.com/tariqul025"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-gray-400 hover:text-white transition-colors"

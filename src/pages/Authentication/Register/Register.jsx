@@ -2,6 +2,7 @@ import React, { useContext } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { AuthContext } from '../../../contexts/AuthContext';
+import { updateProfile } from 'firebase/auth';
 import useAxios from '../../../hooks/useAxios';
 
 const imgbbApiKey = import.meta.env.VITE_API_KEY;
@@ -24,7 +25,6 @@ const Register = () => {
     const role = formData.get('role');
     const imageFile = formData.get('photo');
 
-
     setErrorMessage('');
 
     const passRegex = /(?=.*[a-z])(?=.*[A-Z]).{6,}/;
@@ -33,7 +33,7 @@ const Register = () => {
     }
 
     try {
-      let photoUrl = null;
+      let photoUrl = '';
 
       if (imageFile && imageFile.size > 0) {
         const imageData = new FormData();
@@ -47,25 +47,28 @@ const Register = () => {
         const imgbbData = await imgbbRes.json();
         if (imgbbData.success) {
           photoUrl = imgbbData.data.url;
-          console.log(photoUrl);
         } else {
-          throw new Error('Failed to upload image');
+          throw new Error('Image upload failed');
         }
       }
 
       const result = await createUser(email, password);
-      const createdUser = result.user;
 
-      const userPayload = {
-        uid: createdUser.uid,
+      await updateProfile(result.user, {
+        displayName: name,
+        photoURL: photoUrl,
+      });
+
+      const newUser = {
+        uid: result.user.uid,
         name,
         email,
         photo: photoUrl,
         role,
-        coins: role === 'worker' ? 10 : 50,
+        coins: role === 'buyer' ? 50 : 10,
       };
 
-      await axiosInstance.post(`/api/users`, userPayload);
+      await axiosInstance.post('/api/users', newUser);
 
       Swal.fire({
         icon: 'success',
@@ -79,57 +82,29 @@ const Register = () => {
       navigate(location?.state?.from?.pathname || '/');
     } catch (error) {
       console.error('Registration Error:', error);
-      setErrorMessage(error.message);
+      setErrorMessage(error.message || 'Registration failed');
     }
   };
 
+  // ✅ Google Sign In Handler
   const handleGoogleSignIn = async () => {
+    setErrorMessage('');
     try {
       const result = await GoogleSignIn();
-      const signedInUser = result.user;
 
-      if (!signedInUser.email || !signedInUser.uid) {
-        throw new Error('Google user info is incomplete');
-      }
-
-      const existingRes = await axiosInstance.get(`/api/users/${signedInUser.email}`);
-      const userExists = existingRes.data;
-
-      if (userExists) {
-        Swal.fire({
-          icon: 'success',
-          title: 'Signed in with Google',
-          toast: true,
-          position: 'top',
-          timer: 1500,
-          showConfirmButton: false,
-        });
-      } else {
-        const userPayload = {
-          uid: signedInUser.uid,
-          name: signedInUser.displayName || 'No Name',
-          email: signedInUser.email,
-          photoUrl: signedInUser.photoURL || null,
-          role: 'worker',
-          coins: 10,
-        };
-
-        await axiosInstance.post(`/api/users`, userPayload);
-
-        Swal.fire({
-          icon: 'success',
-          title: 'Signed in with Google & Registered',
-          toast: true,
-          position: 'top',
-          timer: 1500,
-          showConfirmButton: false,
-        });
-      }
+      Swal.fire({
+        icon: 'success',
+        title: 'Signed in with Google',
+        toast: true,
+        position: 'top',
+        timer: 1500,
+        showConfirmButton: false,
+      });
 
       navigate(location?.state?.from?.pathname || '/');
     } catch (error) {
       console.error('Google Sign In Error:', error.message);
-      setErrorMessage(error.message);
+      setErrorMessage(error.message || 'Google Sign In failed');
     }
   };
 
@@ -141,24 +116,20 @@ const Register = () => {
         <form onSubmit={handleRegister} className="space-y-4">
           <div>
             <label className="label font-medium">Full Name</label>
-            <input type="text" name="name" className="input input-bordered w-full" placeholder="Your Name" required />
+            <input type="text" name="name" className="input input-bordered w-full" required />
           </div>
-
           <div>
             <label className="label font-medium">Email</label>
-            <input type="email" name="email" className="input input-bordered w-full" placeholder="Your Email" required />
+            <input type="email" name="email" className="input input-bordered w-full" required />
           </div>
-
           <div>
             <label className="label font-medium">Upload Photo</label>
             <input type="file" name="photo" className="file-input file-input-bordered w-full" accept="image/*" />
           </div>
-
           <div>
             <label className="label font-medium">Password</label>
-            <input type="password" name="password" className="input input-bordered w-full" placeholder="Password" required />
+            <input type="password" name="password" className="input input-bordered w-full" required />
           </div>
-
           <div>
             <label className="label font-medium">Select Role</label>
             <select name="role" className="select select-bordered w-full" required>
@@ -171,19 +142,17 @@ const Register = () => {
           <button type="submit" className="btn btn-primary w-full">Register</button>
         </form>
 
-        {errorMessage && (
-          <div className="text-red-500 text-sm text-center">{errorMessage}</div>
-        )}
+        {errorMessage && <div className="text-red-500 text-sm text-center">{errorMessage}</div>}
 
         <div className="divider">OR</div>
 
+        {/* ✅ Google Sign In Button */}
         <button onClick={handleGoogleSignIn} className="btn btn-outline w-full">
           Sign in with Google
         </button>
 
         <p className="text-center text-sm">
-          Already have an account?{' '}
-          <Link to="/login" className="text-blue-500 hover:underline">Login</Link>
+          Already have an account? <Link to="/login" className="text-blue-500 hover:underline">Login</Link>
         </p>
       </div>
     </div>

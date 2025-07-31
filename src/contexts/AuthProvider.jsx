@@ -7,9 +7,9 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signInWithPopup,
-  signOut
+  signOut,
 } from 'firebase/auth';
-import useAxios from '../hooks/useAxios';
+import useAxios from '../hooks/useAxios';  
 
 const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -34,6 +34,8 @@ const AuthProvider = ({ children }) => {
     setRole(null);
     return signOut(auth);
   };
+
+
 
   const GoogleSignIn = () => {
     return signInWithPopup(auth, provider);
@@ -83,8 +85,8 @@ const AuthProvider = ({ children }) => {
               name: currentUser.displayName || "Unknown",
               email: currentUser.email,
               photo: currentUser.photoURL || "",
-              role: "worker",    
-              coins: 10            
+              role: "worker",
+              coins: 10
             };
 
             try {
@@ -140,3 +142,6 @@ const AuthProvider = ({ children }) => {
 };
 
 export default AuthProvider;
+
+
+
