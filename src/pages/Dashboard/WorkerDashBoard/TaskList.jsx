@@ -65,7 +65,7 @@ const TaskList = () => {
   if (loading) return <div>Loading tasks...</div>;
 
   const displayTasks = tasks.filter(t => !submittedTaskIds.includes(t._id));
-  console.log(displayTasks);
+  // console.log(displayTasks);
 
   if (!displayTasks.length) {
     return <div>No available tasks at the moment.</div>;

@@ -18,7 +18,7 @@ import useAuth from '../hooks/useAuth';
 
 const DashboardLayout = ({ children }) => {
   const { user, logOut, role, coins } = useAuth();
-  console.log(user);
+  // console.log(user);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -61,6 +61,8 @@ const DashboardLayout = ({ children }) => {
   };
 
   const navigationItems = getNavigationItems();
+  
+
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -90,17 +92,13 @@ const DashboardLayout = ({ children }) => {
             </div>
             <div className="flex justify-between items-center space-x-2">
               <img
-                src={user?.photoUrl || '/placeholder.svg'}
+                src={user?.photoURL || user?.photoUrl || user?.photo || user?.reloadUserInfo?.photoUrl || '/placeholder.svg'}
                 alt={user?.name}
                 className="w-8 h-8 rounded-full object-cover"
               />
               <p className="text-xs text-gray-500 capitalize">{role}</p>
             </div>
           </div>
-          {/* <div className="mt-2">
-            <p className="text-sm font-medium text-gray-900">{user?.photoUrl}</p>
-            <p className="text-xs text-gray-500 capitalize">{role}</p>
-          </div> */}
         </div>
 
         <nav className="mt-4">
@@ -167,7 +165,7 @@ const DashboardLayout = ({ children }) => {
 
                 <div className="flex items-center space-x-2">
                   <img
-                    src={user?.photoUrl || '/placeholder.svg'}
+                    src={user?.photoURL || user?.photoUrl || user?.photo || user?.reloadUserInfo?.photoUrl || '/placeholder.svg'}
                     alt={user?.name}
                     className="w-8 h-8 rounded-full object-cover"
                   />

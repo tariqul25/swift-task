@@ -7,7 +7,7 @@ import useAxios from '../../../hooks/useAxios';
 
 const MyTasks = () => {
   const { user, updateUserCoins } = use(AuthContext)
-  console.log(user);
+  // console.log(user);
   const [tasks, setTasks] = useState([]);
   const [editingTask, setEditingTask] = useState(null);
   const axiosInstance=useAxios()

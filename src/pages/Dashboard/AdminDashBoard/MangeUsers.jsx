@@ -8,6 +8,7 @@ const ManageUsers = () => {
   const [users, setUsers] = useState([]);
   const axiosInstance=useAxios()
 
+
   const fetchUsers = async () => {
     try {
       const res = await axiosInstance.get(`/api/users`);
@@ -82,7 +83,7 @@ const ManageUsers = () => {
               <tr key={user._id}>
                 <td className="p-2 border">
                   <img
-                    src={user.photoUrl || '/placeholder.png'}
+                    src={user?.photoURL || user?.photoUrl || user?.photo || user?.reloadUserInfo?.photoUrl || '/placeholder.svg'}
                     alt={user.name}
                     className="w-10 h-10 rounded-full object-cover"
                   />

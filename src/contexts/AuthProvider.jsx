@@ -88,7 +88,7 @@ const AuthProvider = ({ children }) => {
               role: "worker",
               coins: 10
             };
-
+d
             try {
               const createRes = await axiosInstance.post('/api/users', newUser);
               if (createRes.status === 201 || createRes.status === 200) {

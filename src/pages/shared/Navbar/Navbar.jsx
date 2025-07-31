@@ -4,12 +4,12 @@ import { Coins, User, LogOut, Menu, X, Code } from 'lucide-react';
 import useAuth from '../../../hooks/useAuth';
 
 const Navbar = () => {
-  const { user, logOut ,role,coins} = useAuth();
-  console.log(user?.photoUrl);
-  console.log(role);
+  const { user, logOut, role, coins } = useAuth();
+  console.log(user);
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+
 
   const handleLogout = () => {
     logOut();
@@ -58,10 +58,11 @@ const Navbar = () => {
                     className="flex items-center gap-2 hover:text-blue-600"
                   >
                     <img
-                      src={user.photoUrl || '/placeholder.svg'}
+                      src={user?.photoURL || user?.photoUrl || user?.photo || user?.reloadUserInfo?.photoUrl || '/placeholder.svg'}
                       className="w-8 h-8 rounded-full object-cover"
                       alt="User"
                     />
+
                     <span>{user.name}</span>
                   </button>
                   {isProfileOpen && (
@@ -117,7 +118,7 @@ const Navbar = () => {
                   </li>
                   <li className="flex items-center gap-2">
                     <img
-                      src={user?.photoURL || '/placeholder.svg'}
+                      src={user?.photoURL || user?.photoUrl || user?.photo || user?.reloadUserInfo?.photoUrl || '/placeholder.svg'}
                       className="w-6 h-6 rounded-full object-cover"
                       alt="User"
                     />

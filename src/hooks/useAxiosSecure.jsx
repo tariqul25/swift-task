@@ -32,9 +32,9 @@ const useAxiosSecure = () => {
         if (error.response?.status === 401 || error.response?.status === 403) {
           try {
             await logOut();
-            console.log(`Logged out because of error code: ${error.response?.status}`);
+            // console.log(`Logged out because of error code: ${error.response?.status}`);
           } catch (err) {
-            console.log('Logout failed:', err);
+            // console.log('Logout failed:', err);
           }
         }
         return Promise.reject(error);
