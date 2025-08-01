@@ -56,7 +56,7 @@ const BuyerHome = () => {
   const handleReject = async (submissionId, taskId) => {
     try {
       const res = await axiosSecure.patch(
-        `/a/${submissionId}`,
+        `/api/submissions/reject/${submissionId}`,
         { taskId }, 
         {
           headers: {

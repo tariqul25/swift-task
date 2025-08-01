@@ -8,7 +8,7 @@ SwiftTasks is a MERN-based platform where **Buyers** can create small tasks and 
 ## 👨‍💼 Admin Credentials
 
 - **Email:** tariqul21@gmail.com
-- **Password:** 123456Ew!
+- **Password:** 123456Ew
 
 ---
 

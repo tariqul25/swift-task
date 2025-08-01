@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Clock, 
-  DollarSign, 
-  FileText, 
-  Award, 
-  CheckCircle 
+import {
+  Clock,
+  DollarSign,
+  FileText,
+  Award,
+  CheckCircle
 } from 'lucide-react';
 import useAuth from '../../../hooks/useAuth';
 import useAxios from '../../../hooks/useAxios';
@@ -18,7 +18,7 @@ const WorkerHome = () => {
     totalEarning: 0,
     approvedSubmissions: []
   });
-  const axiosSecure= useAxiosSecure()
+  const axiosSecure = useAxiosSecure()
 
   useEffect(() => {
     if (!user?.email) return;
@@ -40,7 +40,7 @@ const WorkerHome = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card icon={<FileText className="w-6 h-6 text-blue-600" />} label="Total Submissions" value={stats.totalSubmissions} bg="bg-blue-100" />
         <Card icon={<Clock className="w-6 h-6 text-yellow-600" />} label="Pending Submissions" value={stats.pendingSubmissions} bg="bg-yellow-100" />
-        <Card icon={<DollarSign className="w-6 h-6 text-green-600" />} label="Total Earnings" value={`$${stats.totalEarning}`} bg="bg-green-100" />
+        <Card icon={<span className="text-green-600 text-2xl  font-bold">৳</span>} label="Total Earnings" value={`${stats.totalEarning}`} bg="bg-green-100" />
       </div>
 
       {/* Approved Submissions Table */}

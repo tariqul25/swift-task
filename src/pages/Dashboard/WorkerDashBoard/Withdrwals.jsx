@@ -37,7 +37,7 @@ const Withdrawal = () => {
 
     const withdrawalData = {
       worker_email: user.email,
-      worker_name: user.displayName,
+      worker_name: user.displayName || user.name,
       withdrawal_coin: coinAmount,
       withdrawal_amount: parseFloat((coinAmount / 20).toFixed(2)), // in dollar
       payment_system: paymentSystem,

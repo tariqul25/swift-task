@@ -4,6 +4,7 @@ import useAuth from '../../../hooks/useAuth';
 import useAxios from '../../../hooks/useAxios';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import Swal from 'sweetalert2';
+import Loading from '../../../Loading';
 
 const TaskList = () => {
   const { user } = useAuth();
@@ -33,7 +34,7 @@ const TaskList = () => {
 
     axiosSecure.get(`/api/submitted-task-ids/${user.email}`)
       .then(res => {
-        setSubmittedTaskIds(res.data); // ⬅️ this must be set correctly
+        setSubmittedTaskIds(res.data); 
       })
       .catch(err => console.error('Failed to fetch submitted IDs:', err));
   }, [user]);
@@ -44,7 +45,7 @@ const TaskList = () => {
     const doc = {
       task_id: selectedTask._id,
       task_title: selectedTask.task_title,
-      payable_amount: selectedTask.payable_amount,
+      payable_amount: Number(selectedTask.payable_amount), 
       buyer_name: selectedTask.buyer_name,
       buyer_email: selectedTask.buyer_email,
       worker_email: user.email,
@@ -53,6 +54,7 @@ const TaskList = () => {
       current_date: new Date().toISOString(),
       status: 'pending'
     };
+    console.log(typeof doc.task_id);
     try {
       await axiosSecure.post(`/api/apply-task`, doc);
       setSubmittedTaskIds(prev => [...prev, selectedTask._id]);
@@ -69,7 +71,7 @@ const TaskList = () => {
     } catch (err) {
       console.error('Submission failed:', err);
       Swal.fire({
-        icon: 'success',
+        icon: 'error',
         title: 'Error!',
         text: 'Error Found',
         timer: 1500,
@@ -78,7 +80,7 @@ const TaskList = () => {
     }
   };
 
-  if (loading) return <div>Loading tasks...</div>;
+  if (loading) return <Loading></Loading>;
 
   const displayTasks = tasks.filter(t => !submittedTaskIds.includes(t._id));
   // console.log(displayTasks);
