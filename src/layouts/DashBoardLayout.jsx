@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import useAuth from '../hooks/useAuth';
+import Footer from '../pages/shared/Footer/Footer';
 
 const DashboardLayout = ({ children }) => {
   const { user, logOut, role, coins } = useAuth();
@@ -61,7 +62,7 @@ const DashboardLayout = ({ children }) => {
   };
 
   const navigationItems = getNavigationItems();
-  
+
 
 
   return (
@@ -143,13 +144,13 @@ const DashboardLayout = ({ children }) => {
               </button>
 
               {/* Logo - visible on larger screens */}
-             <Link to='/'>
-              <div className=" md:hidden lg:flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">ST</span>
-                </div>
-                <span className="text-xl font-bold text-gray-800">SwiftTasks</span>
-              </div></Link>
+              <Link to='/'>
+                <div className=" md:hidden lg:flex items-center space-x-2">
+                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                    <span className="text-white font-bold text-sm">ST</span>
+                  </div>
+                  <span className="text-xl font-bold text-gray-800">SwiftTasks</span>
+                </div></Link>
             </div>
 
             {/* Right side - User info and notifications */}
@@ -222,7 +223,13 @@ const DashboardLayout = ({ children }) => {
             {children}
           </div>
         </main>
+
+
+        <div className=" p-4 bg-gary-600 border-t text-center text-black">
+          <p> © {new Date().getFullYear()} SwiftTasks Platform. All rights reserved.</p>
+        </div>
       </div>
+
 
       {/* Sidebar Overlay for Mobile */}
       {isSidebarOpen && (

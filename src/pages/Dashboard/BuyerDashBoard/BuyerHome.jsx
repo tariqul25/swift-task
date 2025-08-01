@@ -7,7 +7,7 @@ import useAxiosSecure from '../../../hooks/useAxiosSecure';
 const BuyerHome = () => {
   const { user } = useContext(AuthContext);
   const axiosInstance = useAxios();
-  const axiosSecure=useAxiosSecure()
+  const axiosSecure = useAxiosSecure()
 
   const [stats, setStats] = useState({});
   const [submissions, setSubmissions] = useState([]);
@@ -55,18 +55,30 @@ const BuyerHome = () => {
   // Reject Submission
   const handleReject = async (submissionId, taskId) => {
     try {
-      const res = await axiosSecure.delete(`/api/submissions/reject/${submissionId}`, {
-        taskId,
-      });
+      const res = await axiosSecure.patch(
+        `/a/${submissionId}`,
+        { taskId }, 
+        {
+          headers: {
+            'Content-Type': 'application/json', 
+          },
+        }
+      );
 
-      if (res.data.success) {
+
+      if (res.data?.success) {
         Swal.fire('Rejected!', 'Submission has been rejected.', 'info');
-        setSubmissions(submissions.filter((s) => s._id !== submissionId));
+        setSubmissions((prev) => prev.filter((s) => s._id !== submissionId));
+      } else {
+        Swal.fire('Error!', res.data.message || 'Failed to reject submission.', 'error');
       }
     } catch (err) {
-      Swal.fire('Error!', 'Failed to reject submission.', 'error');
+      console.error(err);
+      Swal.fire('Error!', 'Something went wrong. Try again later.', 'error');
     }
   };
+
+
 
   return (
     <div className="p-4">
@@ -105,7 +117,7 @@ const BuyerHome = () => {
             <tbody>
               {submissions.map((s) => (
                 <tr key={s._id}>
-                  <td>{s.buyer_name}</td>
+                  <td>{s.worker_name}</td>
                   <td>{s.task_title}</td>
                   <td>{s.payable_amount}</td>
                   <td>

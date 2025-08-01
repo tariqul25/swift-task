@@ -3,6 +3,7 @@ import { Coins, Users, CalendarCheck } from 'lucide-react';
 import useAuth from '../../../hooks/useAuth';
 import useAxios from '../../../hooks/useAxios';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
+import Swal from 'sweetalert2';
 
 const TaskList = () => {
   const { user } = useAuth();
@@ -11,8 +12,8 @@ const TaskList = () => {
   const [selectedTask, setSelectedTask] = useState(null);
   const [submissionDetails, setSubmissionDetails] = useState('');
   const [loading, setLoading] = useState(true);
-  const axiosInstance=useAxios()
-  const axiosSecure= useAxiosSecure()
+  const axiosInstance = useAxios()
+  const axiosSecure = useAxiosSecure()
 
   useEffect(() => {
     axiosSecure
@@ -27,15 +28,15 @@ const TaskList = () => {
       });
   }, []);
 
- useEffect(() => {
-  if (!user?.email) return;
+  useEffect(() => {
+    if (!user?.email) return;
 
-  axiosSecure.get(`/api/submitted-task-ids/${user.email}`)
-    .then(res => {
-      setSubmittedTaskIds(res.data); // ⬅️ this must be set correctly
-    })
-    .catch(err => console.error('Failed to fetch submitted IDs:', err));
-}, [user]);
+    axiosSecure.get(`/api/submitted-task-ids/${user.email}`)
+      .then(res => {
+        setSubmittedTaskIds(res.data); // ⬅️ this must be set correctly
+      })
+      .catch(err => console.error('Failed to fetch submitted IDs:', err));
+  }, [user]);
 
 
   const handleSubmit = async (e) => {
@@ -47,7 +48,7 @@ const TaskList = () => {
       buyer_name: selectedTask.buyer_name,
       buyer_email: selectedTask.buyer_email,
       worker_email: user.email,
-      worker_name: user.displayName || 'Unknown Worker',
+      worker_name: user.displayName || user.name || 'Unknown Worker',
       submission_details: submissionDetails,
       current_date: new Date().toISOString(),
       status: 'pending'
@@ -57,10 +58,23 @@ const TaskList = () => {
       setSubmittedTaskIds(prev => [...prev, selectedTask._id]);
       setSelectedTask(null);
       setSubmissionDetails('');
-      alert('Submission sent!');
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Submitted!',
+        text: 'Task submitted successfully',
+        timer: 1500,
+        showConfirmButton: false,
+      });
     } catch (err) {
       console.error('Submission failed:', err);
-      alert('Error submitting.');
+      Swal.fire({
+        icon: 'success',
+        title: 'Error!',
+        text: 'Error Found',
+        timer: 1500,
+        showConfirmButton: false,
+      });
     }
   };
 

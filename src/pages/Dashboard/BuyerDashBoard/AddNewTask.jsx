@@ -16,14 +16,24 @@ const AddNewTask = () => {
     submission_info: '',
     task_image_url: ''
   });
-  const axiosSecure=useAxiosSecure()
+  const axiosSecure = useAxiosSecure()
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    const { name, value } = e.target;
+
+    if (name === 'required_workers' || name === 'payable_amount') {
+      setFormData({
+        ...formData,
+        [name]: parseInt(value) || 0, 
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value,
+      });
+    }
   };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();

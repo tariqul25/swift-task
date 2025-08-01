@@ -60,6 +60,7 @@ const MyTasks = () => {
     await axiosSecure.delete(`/api/tasks/${task._id}`);
 
     Swal.fire('Deleted!', 'Task has been deleted.', 'success');
+    updateUserCoins();
     fetchTasks();
   } catch (err) {
     console.error(err);
