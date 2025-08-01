@@ -7,7 +7,6 @@ import {
   CheckCircle
 } from 'lucide-react';
 import useAuth from '../../../hooks/useAuth';
-import useAxios from '../../../hooks/useAxios';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 
 const WorkerHome = () => {
@@ -71,7 +70,7 @@ const WorkerHome = () => {
                     <tr key={index} className="hover:bg-gray-50">
                       <Cell>{sub.task_title}</Cell>
                       <Cell>${sub.payable_amount}</Cell>
-                      <Cell>{sub.buyer_name}</Cell>
+                      <Cell>{sub.worker_name}</Cell>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                           Approved

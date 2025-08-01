@@ -82,7 +82,7 @@ const AdminHome = () => {
       <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
 
       {/* Stats Section */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div className="bg-blue-100 p-4 rounded shadow text-center">
           <h2 className="text-lg font-semibold">Total Workers</h2>
           <p className="text-2xl font-bold text-blue-600">{stats.totalWorkers || 0}</p>
@@ -90,10 +90,6 @@ const AdminHome = () => {
         <div className="bg-green-100 p-4 rounded shadow text-center">
           <h2 className="text-lg font-semibold">Total Buyers</h2>
           <p className="text-2xl font-bold text-green-600">{stats.totalBuyers || 0}</p>
-        </div>
-        <div className="bg-yellow-100 p-4 rounded shadow text-center">
-          <h2 className="text-lg font-semibold">Total Coins</h2>
-          <p className="text-2xl font-bold text-yellow-600">{stats.totalCoins || 0}</p>
         </div>
         <div className="bg-purple-100 p-4 rounded shadow text-center">
           <h2 className="text-lg font-semibold">Total Payments</h2>

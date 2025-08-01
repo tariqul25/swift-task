@@ -46,7 +46,6 @@ const updateUserCoins = async () => {
     const res = await axiosInstance.get(`/api/user/coins?email=${user?.email}`);
     const updatedCoin = res.data.coin;
 
-    // 🟡 Update the state
     setUser(prev => ({ ...prev, coins: updatedCoin }));
     console.log(setUser, setUser.coins);
   } catch (error) {

@@ -4,8 +4,8 @@ import { Coins, User, LogOut, Menu, X, Code } from 'lucide-react';
 import useAuth from '../../../hooks/useAuth';
 
 const Navbar = () => {
-  const { user, logOut, role, coins } = useAuth();
-  console.log(user?.coins);
+  const { user, logOut, role } = useAuth();
+  console.log(role);
   //  console.log(user.accessToken);
   // console.log(user.getIdToken);
   const navigate = useNavigate();
@@ -48,12 +48,15 @@ const Navbar = () => {
             {commonLinks}
             {user ? (
               <>
-                <li>
-                  <div className="flex items-center gap-2 bg-yellow-100 px-3 py-1 rounded-full">
-                    <Coins className="w-4 h-4 text-yellow-600" />
-                    <span className="text-yellow-800 font-medium">{user?.coins || 0}</span>
-                  </div>
-                </li>
+                {role !== 'admin' && (
+                  <li>
+                    <div className="flex items-center gap-2 bg-yellow-100 px-3 py-1 rounded-full">
+                      <Coins className="w-4 h-4 text-yellow-600" />
+                      <span className="text-yellow-800 font-medium">{user?.coins || 0}</span>
+                    </div>
+                  </li>
+                )}
+
                 <li className="relative">
                   <button
                     onClick={() => setIsProfileOpen(!isProfileOpen)}
@@ -114,10 +117,13 @@ const Navbar = () => {
               {commonLinks}
               {user ? (
                 <>
-                  <li className="flex items-center gap-2">
-                    <Coins className="w-4 h-4 text-yellow-600" />
-                    <span className="text-yellow-800 font-medium">{coins || 0} Coins</span>
-                  </li>
+                  {role !== 'admin' && (
+                    <li className="flex items-center gap-2">
+                      <Coins className="w-4 h-4 text-yellow-600" />
+                      <span className="text-yellow-800 font-medium">{user?.coins || 0} Coins</span>
+                    </li>
+                  )}
+
                   <li className="flex items-center gap-2">
                     <img
                       src={user?.photoURL || user?.photoUrl || user?.photo || user?.reloadUserInfo?.photoUrl || '/placeholder.svg'}
