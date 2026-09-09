@@ -102,10 +102,32 @@ const Profile = () => {
 
       // 1. Update Firebase Auth Profile if logged in with Firebase
       if (auth?.currentUser) {
-        await updateProfile(auth.currentUser, {
-          displayName,
-          photoURL: finalPhotoUrl,
-        });
+        // Firebase Auth photoURL has a 2048-character limit and only accepts valid web URLs.
+        // Base64 data URLs exceed this limit and cause (auth/invalid-profile-attribute).
+        const isStandardWebUrl =
+          finalPhotoUrl &&
+          !finalPhotoUrl.startsWith('data:') &&
+          finalPhotoUrl.length < 2048;
+
+        try {
+          if (isStandardWebUrl) {
+            await updateProfile(auth.currentUser, {
+              displayName,
+              photoURL: finalPhotoUrl,
+            });
+          } else {
+            await updateProfile(auth.currentUser, {
+              displayName,
+            });
+          }
+        } catch (firebaseErr) {
+          console.warn('Firebase Auth updateProfile warning:', firebaseErr);
+          try {
+            await updateProfile(auth.currentUser, { displayName });
+          } catch (e) {
+            // non-fatal
+          }
+        }
       }
 
       // 2. Update MongoDB Backend Profile

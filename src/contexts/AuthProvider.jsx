@@ -37,8 +37,31 @@ const AuthProvider = ({ children }) => {
 
 
 
-  const GoogleSignIn = () => {
-    return signInWithPopup(auth, provider);
+  const GoogleSignIn = async () => {
+    const result = await signInWithPopup(auth, provider);
+    const googleUser = result.user;
+    if (googleUser?.email) {
+      try {
+        await axiosInstance.get(`/api/users/${googleUser.email}`);
+      } catch (err) {
+        if (err.response && err.response.status === 404) {
+          const newUser = {
+            uid: googleUser.uid,
+            name: googleUser.displayName || 'Google User',
+            email: googleUser.email,
+            photo: googleUser.photoURL || '',
+            role: 'worker',
+            coins: 10,
+          };
+          try {
+            await axiosInstance.post('/api/users', newUser);
+          } catch (createErr) {
+            console.error('Google user creation in DB failed:', createErr);
+          }
+        }
+      }
+    }
+    return result;
   };
 
   const updateUserCoins = async (explicitCoins) => {
@@ -124,26 +147,16 @@ const AuthProvider = ({ children }) => {
           }
         } catch (error) {
           if (error.response && error.response.status === 404) {
-            // User doesn't exist → insert full info to MongoDB
-            const newUser = {
-              uid: currentUser.uid,
-              name: currentUser.displayName || "Unknown",
-              email: currentUser.email,
-              photo: currentUser.photoURL || "",
-              role: "worker",
-              coins: 10
-            };
+            // User does not exist in DB (deleted by admin) → log out immediately
+            console.warn('User deleted from DB. Signing out from Firebase Auth.');
             try {
-              const createRes = await axiosInstance.post('/api/users', newUser);
-              if (createRes.status === 201 || createRes.status === 200) {
-                const createdUser = createRes.data;
-                setUser(newUser);
-                setRole(createdUser.role);
-                setCoins(createdUser.coins);
-              }
-            } catch (createError) {
-              console.error('User creation failed:', createError);
+              await signOut(auth);
+            } catch (signOutErr) {
+              console.warn('Sign out error:', signOutErr);
             }
+            setUser(null);
+            setRole(null);
+            setCoins(0);
           } else {
             console.error('Fetch user error:', error.message);
           }

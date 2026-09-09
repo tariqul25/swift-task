@@ -46,10 +46,30 @@ const Register = () => {
 
       const result = await createUser(email, password);
 
-      await updateProfile(result.user, {
-        displayName: name,
-        photoURL: photoUrl,
-      });
+      const isStandardWebUrl =
+        photoUrl &&
+        !photoUrl.startsWith('data:') &&
+        photoUrl.length < 2048;
+
+      try {
+        if (isStandardWebUrl) {
+          await updateProfile(result.user, {
+            displayName: name,
+            photoURL: photoUrl,
+          });
+        } else {
+          await updateProfile(result.user, {
+            displayName: name,
+          });
+        }
+      } catch (profileErr) {
+        console.warn('Firebase Auth updateProfile warning:', profileErr);
+        try {
+          await updateProfile(result.user, { displayName: name });
+        } catch (e) {
+          // non-fatal
+        }
+      }
 
       const newUser = {
         uid: result.user.uid,

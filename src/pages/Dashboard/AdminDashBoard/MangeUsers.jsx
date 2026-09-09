@@ -24,7 +24,7 @@ const ManageUsers = () => {
     fetchUsers();
   }, []);
 
-  const handleDeleteUser = async (email, name) => {
+  const handleDeleteUser = async (email, name, uid) => {
     const confirm = await Swal.fire({
       title: 'Delete User Account?',
       text: `Are you sure you want to permanently delete ${name || email}? This cannot be undone.`,
@@ -37,7 +37,8 @@ const ManageUsers = () => {
 
     if (confirm.isConfirmed) {
       try {
-        const res = await axiosSecure.delete(`/api/users/${email}`);
+        const url = uid ? `/api/users/${email}?uid=${encodeURIComponent(uid)}` : `/api/users/${email}`;
+        const res = await axiosSecure.delete(url);
         if (res.data.success) {
           Swal.fire('Deleted!', 'User account has been deleted.', 'success');
           fetchUsers();
@@ -180,7 +181,7 @@ const ManageUsers = () => {
                       </td>
                       <td className="py-4 px-6 text-right">
                         <button
-                          onClick={() => handleDeleteUser(user.email, user.name)}
+                          onClick={() => handleDeleteUser(user.email, user.name, user.uid)}
                           className="p-2 rounded-lg text-rose-500 hover:text-white hover:bg-rose-500 transition-colors cursor-pointer"
                           title="Delete User"
                         >
