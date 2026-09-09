@@ -17,6 +17,7 @@ import PurchaseCoins from "../pages/Dashboard/BuyerDashBoard/PurchaseCoins";
 import PaymentHistory from "../pages/Dashboard/BuyerDashBoard/PaymentHistory";
 import ErrorPage from "../pages/ErrorPage/ErrorPage";
 import PrivateRoute from "../routes/PrivateRoute";
+import Profile from "../pages/Dashboard/Profile/Profile";
 
 
 export const router = createBrowserRouter([
@@ -54,7 +55,8 @@ export const router = createBrowserRouter([
 
       { path: "my-submission", element:  <PrivateRoute><MySubmissions /></PrivateRoute> },
       { path: "task-list", element:  <PrivateRoute><TaskList /></PrivateRoute> },
-      { path: "withdrawals", element:  <PrivateRoute><Withdrawals /></PrivateRoute> }
+      { path: "withdrawals", element:  <PrivateRoute><Withdrawals /></PrivateRoute> },
+      { path: "profile", element: <PrivateRoute><Profile /></PrivateRoute> }
     ]
   },
   {

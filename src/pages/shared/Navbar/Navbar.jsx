@@ -188,6 +188,14 @@ const Navbar = () => {
 
                       <div className="py-1">
                         <Link
+                          to="/dashboard/profile"
+                          onClick={() => setIsProfileOpen(false)}
+                          className="flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors"
+                        >
+                          <UserIcon className="w-4 h-4 text-indigo-500" />
+                          My Profile
+                        </Link>
+                        <Link
                           to="/dashboard"
                           onClick={() => setIsProfileOpen(false)}
                           className="flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
@@ -266,13 +274,22 @@ const Navbar = () => {
             </NavLink>
 
             {user && (
-              <NavLink
-                to="/dashboard"
-                onClick={() => setIsMenuOpen(false)}
-                className="px-3 py-2 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900"
-              >
-                Dashboard
-              </NavLink>
+              <>
+                <NavLink
+                  to="/dashboard"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="px-3 py-2 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900"
+                >
+                  Dashboard
+                </NavLink>
+                <NavLink
+                  to="/dashboard/profile"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="px-3 py-2 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900"
+                >
+                  My Profile
+                </NavLink>
+              </>
             )}
 
             <a

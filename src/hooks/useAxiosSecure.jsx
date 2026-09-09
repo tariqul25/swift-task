@@ -1,14 +1,15 @@
-import axios from 'axios';
-import { auth } from '../firebase/firebase.config';
+﻿import axios from "axios";
+import { auth } from "../firebase/firebase.config";
+import { signOut } from "firebase/auth";
 
-const baseURL = import.meta.env.VITE_BACKEND_URL || 'https://swift-tasks-server.vercel.app';
+const baseURL = import.meta.env.VITE_BACKEND_URL || "https://swift-tasks-server.vercel.app";
 
 const axiosSecure = axios.create({
   baseURL,
   withCredentials: true,
 });
 
-// Single request interceptor attaching fresh Firebase ID token
+// Request interceptor: attach fresh Firebase ID token
 axiosSecure.interceptors.request.use(
   async (config) => {
     try {
@@ -18,15 +19,28 @@ axiosSecure.interceptors.request.use(
         config.headers.authorization = `Bearer ${token}`;
       }
     } catch (err) {
-      console.error('Failed to get token for secure request:', err);
+      console.error("Failed to get token:", err);
     }
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-const useAxiosSecure = () => {
-  return axiosSecure;
-};
+// Response interceptor: auto-logout on 401 / 403
+axiosSecure.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const status = error?.response?.status;
+    if (status === 401 || status === 403) {
+      try {
+        await signOut(auth);
+      } catch (_) {}
+      window.location.href = "/login";
+    }
+    return Promise.reject(error);
+  }
+);
+
+const useAxiosSecure = () => axiosSecure;
 
 export default useAxiosSecure;

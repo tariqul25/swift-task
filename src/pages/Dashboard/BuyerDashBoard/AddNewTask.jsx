@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import Swal from 'sweetalert2';
-import { Plus, Coins, Calendar, Users, FileText, Image as ImageIcon, ArrowRight } from 'lucide-react';
+import { Plus, Coins, Calendar, Users, FileText, Image as ImageIcon, ArrowRight, Upload } from 'lucide-react';
 import useAuth from '../../../hooks/useAuth';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import { useNavigate } from 'react-router';
+
+const imgbbApiKey = import.meta.env.VITE_IMGBB_KEY;
+const imgbbUploadUrl = `https://api.imgbb.com/1/upload?key=${imgbbApiKey}`;
 
 const AddNewTask = () => {
   const { user, coins, fetchUser } = useAuth();
@@ -17,21 +20,25 @@ const AddNewTask = () => {
     submission_info: '',
     task_image_url: ''
   });
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const axiosSecure = useAxiosSecure();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     if (name === 'required_workers' || name === 'payable_amount') {
-      setFormData({
-        ...formData,
-        [name]: parseInt(value) || 0,
-      });
+      setFormData({ ...formData, [name]: parseInt(value) || 0 });
     } else {
-      setFormData({
-        ...formData,
-        [name]: value,
-      });
+      setFormData({ ...formData, [name]: value });
+    }
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
     }
   };
 
@@ -63,8 +70,26 @@ const AddNewTask = () => {
     }
 
     setLoading(true);
+
+    // Upload image to imgBB if file selected
+    let imageUrl = formData.task_image_url;
+    if (imageFile && imgbbApiKey) {
+      try {
+        const imgData = new FormData();
+        imgData.append('image', imageFile);
+        const imgRes = await fetch(imgbbUploadUrl, { method: 'POST', body: imgData });
+        const imgJson = await imgRes.json();
+        if (imgJson?.success && imgJson?.data?.url) {
+          imageUrl = imgJson.data.url;
+        }
+      } catch (uploadErr) {
+        console.warn('Image upload failed, using URL fallback:', uploadErr);
+      }
+    }
+
     const newTask = {
       ...formData,
+      task_image_url: imageUrl,
       buyer_email: user?.email,
       buyer_name: user?.displayName || user?.name || 'Buyer',
       buyer_id: user?.uid || user?.id,
@@ -141,21 +166,37 @@ const AddNewTask = () => {
             </div>
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
-                Task Cover Image URL (Optional)
+                Task Cover Image (Upload or URL)
               </label>
-              <div className="relative">
-                <ImageIcon className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="url"
-                  name="task_image_url"
-                  value={formData.task_image_url}
-                  onChange={handleChange}
-                  placeholder="https://images.unsplash.com/..."
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
+              {/* File Upload */}
+              <label className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-dashed border-slate-300 dark:border-slate-600 cursor-pointer hover:border-indigo-500 transition-colors group">
+                <Upload className="w-4 h-4 text-slate-400 group-hover:text-indigo-500 transition-colors" />
+                <span className="text-sm text-slate-500 dark:text-slate-400 truncate">
+                  {imageFile ? imageFile.name : 'Click to upload image'}
+                </span>
+                <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+              </label>
+              {/* Preview */}
+              {imagePreview && (
+                <img src={imagePreview} alt="preview" className="mt-2 w-full h-24 object-cover rounded-xl border border-slate-200 dark:border-slate-700" />
+              )}
+              {/* Fallback URL */}
+              {!imageFile && (
+                <div className="relative mt-2">
+                  <ImageIcon className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="url"
+                    name="task_image_url"
+                    value={formData.task_image_url}
+                    onChange={handleChange}
+                    placeholder="Or paste image URL..."
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              )}
             </div>
           </div>
+
 
           {/* Details */}
           <div>
