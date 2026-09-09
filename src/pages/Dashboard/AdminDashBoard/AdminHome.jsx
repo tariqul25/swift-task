@@ -9,16 +9,15 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  ArrowUpRight,
   ShieldCheck,
-  AlertCircle,
-  FileText,
   Eye,
   X,
-  Send,
+  Trash2,
   Calendar,
-  User,
-  Mail
+  Wallet,
+  FileText,
+  DollarSign,
+  AlertTriangle
 } from 'lucide-react';
 
 const AdminHome = () => {
@@ -30,10 +29,10 @@ const AdminHome = () => {
     totalTasks: 0,
   });
   const [withdrawals, setWithdrawals] = useState([]);
-  const [submissions, setSubmissions] = useState([]);
+  const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('submissions'); // 'submissions' or 'withdrawals'
-  const [selectedSubmission, setSelectedSubmission] = useState(null);
+  const [activeTab, setActiveTab] = useState('withdrawals'); // 'withdrawals' or 'tasks'
+  const [selectedTask, setSelectedTask] = useState(null);
 
   const axiosSecure = useAxiosSecure();
 
@@ -46,42 +45,39 @@ const AdminHome = () => {
     }
   };
 
-  const fetchPending = async () => {
+  const fetchWithdrawals = async () => {
     try {
-      const [withRes, subRes] = await Promise.allSettled([
-        axiosSecure.get(`/api/pending/withdrawals`),
-        axiosSecure.get(`/api/admin/pending-submissions`),
-      ]);
-
-      const wData = withRes.status === 'fulfilled' ? withRes.value.data || [] : [];
-      const sData = subRes.status === 'fulfilled' ? subRes.value.data || [] : [];
-
-      setWithdrawals(wData);
-      setSubmissions(sData);
-
-      // Default to whichever has pending items
-      if (sData.length > 0 && wData.length === 0) {
-        setActiveTab('submissions');
-      } else if (wData.length > 0 && sData.length === 0) {
-        setActiveTab('withdrawals');
-      }
+      const res = await axiosSecure.get(`/api/pending/withdrawals`);
+      setWithdrawals(res.data || []);
     } catch (err) {
-      console.error('Failed to fetch pending items:', err);
-    } finally {
-      setLoading(false);
+      console.error('Failed to fetch pending withdrawals:', err);
     }
   };
 
+  const fetchTasks = async () => {
+    try {
+      const res = await axiosSecure.get(`/api/tasks`);
+      setTasks(res.data || []);
+    } catch (err) {
+      console.error('Failed to fetch buyer tasks:', err);
+    }
+  };
+
+  const loadAllData = async () => {
+    setLoading(true);
+    await Promise.allSettled([fetchStats(), fetchWithdrawals(), fetchTasks()]);
+    setLoading(false);
+  };
+
   useEffect(() => {
-    fetchStats();
-    fetchPending();
+    loadAllData();
   }, []);
 
-  // --- Withdrawal Handlers ---
+  // --- Withdrawal Handlers (Admin Approves/Rejects Worker Cashouts) ---
   const handleApproveWithdrawal = async (id, workerName, amount) => {
     const confirm = await Swal.fire({
       title: 'Approve Payout?',
-      text: `Confirm payment payout to ${workerName} for $${amount}? Worker coins will be deducted automatically.`,
+      text: `Confirm payout to ${workerName} for $${amount}?`,
       icon: 'question',
       showCancelButton: true,
       confirmButtonText: 'Yes, Confirm Payout',
@@ -92,8 +88,14 @@ const AdminHome = () => {
     if (confirm.isConfirmed) {
       try {
         await axiosSecure.patch(`/api/withdrawals/approve/${id}`);
-        Swal.fire('Approved!', 'Withdrawal marked as successful and coins deducted.', 'success');
-        fetchPending();
+        Swal.fire({
+          icon: 'success',
+          title: 'Withdrawal Approved!',
+          text: `Payment of $${amount} has been approved and marked successful.`,
+          timer: 2000,
+          showConfirmButton: false,
+        });
+        fetchWithdrawals();
         fetchStats();
       } catch (err) {
         console.error('Approval failed:', err);
@@ -105,10 +107,10 @@ const AdminHome = () => {
   const handleRejectWithdrawal = async (id, workerName) => {
     const confirm = await Swal.fire({
       title: 'Reject Withdrawal?',
-      text: `Are you sure you want to reject the withdrawal request for ${workerName}?`,
+      text: `Are you sure you want to reject the withdrawal for ${workerName}? The deducted coins will be refunded back to the worker.`,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonText: 'Yes, Reject',
+      confirmButtonText: 'Yes, Reject & Refund',
       cancelButtonText: 'Cancel',
       confirmButtonColor: '#EF4444',
     });
@@ -117,8 +119,15 @@ const AdminHome = () => {
       try {
         const res = await axiosSecure.delete(`/api/withdrawals/reject/${id}`);
         if (res.data?.success) {
-          Swal.fire('Rejected', 'Withdrawal request has been removed.', 'success');
-          fetchPending();
+          Swal.fire({
+            icon: 'info',
+            title: 'Withdrawal Rejected',
+            text: 'Request has been rejected and coins were refunded to the worker.',
+            timer: 2000,
+            showConfirmButton: false,
+          });
+          fetchWithdrawals();
+          fetchStats();
         }
       } catch (err) {
         console.error('Rejection failed:', err);
@@ -127,58 +136,34 @@ const AdminHome = () => {
     }
   };
 
-  // --- Submission Handlers ---
-  const handleApproveSubmission = async (sub) => {
+  // --- Task Handlers (Admin Manages/Deletes Buyer Tasks) ---
+  const handleDeleteTask = async (taskId, title) => {
     const confirm = await Swal.fire({
-      title: 'Approve Submission?',
-      text: `Approve "${sub.task_title}" by ${sub.worker_name || sub.worker_email}? ${sub.payable_amount} coins will be credited to the worker.`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Yes, Approve & Reward',
-      cancelButtonText: 'Cancel',
-      confirmButtonColor: '#10B981',
-    });
-
-    if (confirm.isConfirmed) {
-      try {
-        await axiosSecure.patch(`/api/submissions/approve/${sub._id}`, {
-          workerEmail: sub.worker_email,
-          coins: sub.payable_amount,
-        });
-        Swal.fire('Approved!', 'Submission approved and reward coins granted to worker.', 'success');
-        setSelectedSubmission(null);
-        fetchPending();
-        fetchStats();
-      } catch (err) {
-        console.error('Submission approval failed:', err);
-        Swal.fire('Error', 'Failed to approve submission.', 'error');
-      }
-    }
-  };
-
-  const handleRejectSubmission = async (sub) => {
-    const confirm = await Swal.fire({
-      title: 'Reject Submission?',
-      text: `Reject "${sub.task_title}" submission by ${sub.worker_name || sub.worker_email}? Task vacancy will be restored for other workers.`,
+      title: 'Delete Buyer Task?',
+      text: `Are you sure you want to permanently remove "${title}"? This cannot be undone.`,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonText: 'Yes, Reject',
+      confirmButtonText: 'Yes, Delete Task',
       cancelButtonText: 'Cancel',
       confirmButtonColor: '#EF4444',
     });
 
     if (confirm.isConfirmed) {
       try {
-        await axiosSecure.patch(`/api/submissions/reject/${sub._id}`, {
-          taskId: sub.task_id,
+        await axiosSecure.delete(`/api/tasks/${taskId}`);
+        setTasks((prev) => prev.filter((t) => t._id !== taskId));
+        if (selectedTask?._id === taskId) setSelectedTask(null);
+        Swal.fire({
+          icon: 'success',
+          title: 'Task Removed',
+          text: 'Buyer task has been deleted from platform.',
+          timer: 1500,
+          showConfirmButton: false,
         });
-        Swal.fire('Rejected', 'Submission rejected and task slot restored.', 'success');
-        setSelectedSubmission(null);
-        fetchPending();
         fetchStats();
       } catch (err) {
-        console.error('Submission rejection failed:', err);
-        Swal.fire('Error', 'Failed to reject submission.', 'error');
+        console.error('Failed to delete task:', err);
+        Swal.fire('Error', 'Failed to delete task.', 'error');
       }
     }
   };
@@ -196,21 +181,21 @@ const AdminHome = () => {
       value: stats.totalBuyers || 0,
       icon: Briefcase,
       bgLight: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-      badge: 'Task Posters',
+      badge: 'Work Providers',
     },
     {
-      title: 'Total Tasks Created',
+      title: 'Buyer Tasks Posted',
       value: stats.totalTasks || 0,
       icon: CheckCircle2,
       bgLight: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400',
-      badge: 'Platform Pool',
+      badge: 'Active Work Pool',
     },
     {
       title: 'Payments Processed',
       value: stats.totalPayments || 0,
       icon: CreditCard,
       bgLight: 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
-      badge: 'Coin Orders',
+      badge: 'Total Revenue Orders',
     },
   ];
 
@@ -224,10 +209,10 @@ const AdminHome = () => {
             Executive Administration
           </div>
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
-            System Control Center
+            Admin Management Portal
           </h1>
           <p className="mt-2 text-white/80 text-sm leading-relaxed">
-            Monitor real-time network activity, review worker submissions, and oversee escrow payouts.
+            Approve worker withdrawal requests and supervise tasks posted by buyers across the platform.
           </p>
         </div>
       </div>
@@ -257,41 +242,23 @@ const AdminHome = () => {
         ))}
       </div>
 
-      {/* Pending Queues Section */}
+      {/* Main Management Section */}
       <div className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden">
         {/* Header & Tabs */}
         <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <Clock className="w-5 h-5 text-amber-500" />
-              Pending Approvals & Review Center
+              Operations & Approvals Center
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Review and act on pending task submissions and worker cashout requests.
+              Manage pending worker withdrawals and supervise tasks posted by buyers.
             </p>
           </div>
 
           {/* Tab Switcher */}
           <div className="flex items-center gap-2 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60">
-            <button
-              onClick={() => setActiveTab('submissions')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'submissions'
-                  ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              <FileText className="w-4 h-4" />
-              <span>Task Submissions</span>
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                submissions.length > 0
-                  ? 'bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300'
-                  : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
-              }`}>
-                {submissions.length}
-              </span>
-            </button>
-
+            {/* Tab 1: Withdrawal Requests */}
             <button
               onClick={() => setActiveTab('withdrawals')}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
@@ -300,108 +267,44 @@ const AdminHome = () => {
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              <Coins className="w-4 h-4" />
-              <span>Withdrawal Requests</span>
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                withdrawals.length > 0
-                  ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
-                  : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
-              }`}>
+              <Wallet className="w-4 h-4" />
+              <span>Worker Withdrawals</span>
+              <span
+                className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                  withdrawals.length > 0
+                    ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
+                    : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                }`}
+              >
                 {withdrawals.length}
+              </span>
+            </button>
+
+            {/* Tab 2: Buyer Tasks Pool */}
+            <button
+              onClick={() => setActiveTab('tasks')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'tasks'
+                  ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Briefcase className="w-4 h-4" />
+              <span>Buyer Work Posts</span>
+              <span
+                className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                  tasks.length > 0
+                    ? 'bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300'
+                    : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                }`}
+              >
+                {tasks.length}
               </span>
             </button>
           </div>
         </div>
 
-        {/* Tab Content: Task Submissions */}
-        {activeTab === 'submissions' && (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">
-                <tr>
-                  <th className="py-3.5 px-6 font-semibold">Worker Details</th>
-                  <th className="py-3.5 px-6 font-semibold">Task Title</th>
-                  <th className="py-3.5 px-6 font-semibold">Payable Coins</th>
-                  <th className="py-3.5 px-6 font-semibold">Buyer Email</th>
-                  <th className="py-3.5 px-6 font-semibold">Submitted Date</th>
-                  <th className="py-3.5 px-6 font-semibold text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
-                {submissions.length === 0 ? (
-                  <tr>
-                    <td colSpan="6" className="py-12 text-center text-slate-400 dark:text-slate-500">
-                      <div className="flex flex-col items-center justify-center">
-                        <CheckCircle2 className="w-10 h-10 text-emerald-500 mb-2 opacity-80" />
-                        <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                          No pending submissions!
-                        </p>
-                        <p className="text-xs text-slate-400 mt-0.5">
-                          All worker submissions have been reviewed and approved or rejected.
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  submissions.map((sub) => (
-                    <tr key={sub._id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                      <td className="py-4 px-6">
-                        <div className="font-semibold text-slate-900 dark:text-white">
-                          {sub.worker_name || 'Worker'}
-                        </div>
-                        <div className="text-xs text-slate-400">
-                          {sub.worker_email}
-                        </div>
-                      </td>
-                      <td className="py-4 px-6">
-                        <span className="font-medium text-slate-800 dark:text-slate-200 max-w-[220px] truncate block" title={sub.task_title}>
-                          {sub.task_title}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6">
-                        <span className="inline-flex items-center gap-1 font-extrabold text-amber-600 dark:text-amber-400">
-                          <Coins className="w-3.5 h-3.5" />
-                          {sub.payable_amount}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6 text-xs text-slate-500 dark:text-slate-400">
-                        {sub.buyer_email || 'N/A'}
-                      </td>
-                      <td className="py-4 px-6 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                        {sub.current_date ? new Date(sub.current_date).toLocaleDateString() : 'Recent'}
-                      </td>
-                      <td className="py-4 px-6 text-right space-x-2 whitespace-nowrap">
-                        <button
-                          onClick={() => setSelectedSubmission(sub)}
-                          className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold transition-colors cursor-pointer inline-flex items-center gap-1"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          View Details
-                        </button>
-                        <button
-                          onClick={() => handleApproveSubmission(sub)}
-                          className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer inline-flex items-center gap-1"
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => handleRejectSubmission(sub)}
-                          className="px-3 py-1.5 rounded-lg bg-rose-500 hover:bg-rose-600 text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer inline-flex items-center gap-1"
-                        >
-                          <XCircle className="w-3.5 h-3.5" />
-                          Reject
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* Tab Content: Withdrawal Requests */}
+        {/* Tab 1 Content: Worker Withdrawal Requests */}
         {activeTab === 'withdrawals' && (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
@@ -409,67 +312,185 @@ const AdminHome = () => {
                 <tr>
                   <th className="py-3.5 px-6 font-semibold">Worker Details</th>
                   <th className="py-3.5 px-6 font-semibold">Coins Requested</th>
-                  <th className="py-3.5 px-6 font-semibold">USD Value</th>
+                  <th className="py-3.5 px-6 font-semibold">USD Payout Amount</th>
                   <th className="py-3.5 px-6 font-semibold">Payout Gateway</th>
-                  <th className="py-3.5 px-6 font-semibold">Account Details</th>
+                  <th className="py-3.5 px-6 font-semibold">Account / Phone Number</th>
+                  <th className="py-3.5 px-6 font-semibold">Request Date</th>
                   <th className="py-3.5 px-6 font-semibold text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
                 {withdrawals.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="py-12 text-center text-slate-400 dark:text-slate-500">
+                    <td colSpan="7" className="py-14 text-center text-slate-400 dark:text-slate-500">
                       <div className="flex flex-col items-center justify-center">
-                        <CheckCircle2 className="w-10 h-10 text-emerald-500 mb-2 opacity-80" />
-                        <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        <CheckCircle2 className="w-12 h-12 text-emerald-500 mb-2.5 opacity-80" />
+                        <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
                           Withdrawal queue is clear!
                         </p>
-                        <p className="text-xs text-slate-400 mt-0.5">
-                          No pending worker cashout requests awaiting approval.
+                        <p className="text-xs text-slate-400 mt-1 max-w-sm">
+                          When workers request cashouts, they will appear here for you to approve payment or reject and refund coins.
                         </p>
                       </div>
                     </td>
                   </tr>
                 ) : (
-                  withdrawals.map((w) => (
-                    <tr key={w._id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                  withdrawals.map((w) => {
+                    const dollarVal = w.withdrawal_amount
+                      ? Number(w.withdrawal_amount).toFixed(2)
+                      : (Number(w.withdrawal_coin || 0) / 20).toFixed(2);
+                    return (
+                      <tr
+                        key={w._id}
+                        className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
+                      >
+                        <td className="py-4 px-6">
+                          <div className="font-semibold text-slate-900 dark:text-white">
+                            {w.worker_name || 'Worker'}
+                          </div>
+                          <div className="text-xs text-slate-400 font-mono mt-0.5">
+                            {w.worker_email}
+                          </div>
+                        </td>
+                        <td className="py-4 px-6">
+                          <span className="inline-flex items-center gap-1 font-bold text-amber-600 dark:text-amber-400">
+                            <Coins className="w-3.5 h-3.5" />
+                            {Number(w.withdrawal_coin || 0).toLocaleString()}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6 font-bold text-emerald-600 dark:text-emerald-400">
+                          ${dollarVal}
+                        </td>
+                        <td className="py-4 px-6">
+                          <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200/60 dark:border-slate-700/60">
+                            {w.payment_system || 'bKash'}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6 font-mono text-xs font-semibold text-slate-700 dark:text-slate-300">
+                          {w.account_number}
+                        </td>
+                        <td className="py-4 px-6 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                          {w.withdraw_date
+                            ? new Date(w.withdraw_date).toLocaleDateString()
+                            : 'Recent'}
+                        </td>
+                        <td className="py-4 px-6 text-right space-x-2 whitespace-nowrap">
+                          <button
+                            onClick={() =>
+                              handleApproveWithdrawal(
+                                w._id,
+                                w.worker_name || w.worker_email,
+                                dollarVal
+                              )
+                            }
+                            className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer inline-flex items-center gap-1"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            Approve Payout
+                          </button>
+                          <button
+                            onClick={() =>
+                              handleRejectWithdrawal(
+                                w._id,
+                                w.worker_name || w.worker_email
+                              )
+                            }
+                            className="px-3 py-1.5 rounded-lg bg-rose-500 hover:bg-rose-600 text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer inline-flex items-center gap-1"
+                          >
+                            <XCircle className="w-3.5 h-3.5" />
+                            Reject & Refund
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Tab 2 Content: Buyer Tasks Pool (Only Buyer Posted Work Shows Here) */}
+        {activeTab === 'tasks' && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">
+                <tr>
+                  <th className="py-3.5 px-6 font-semibold">Task Title</th>
+                  <th className="py-3.5 px-6 font-semibold">Posted By (Buyer)</th>
+                  <th className="py-3.5 px-6 font-semibold">Reward / Worker</th>
+                  <th className="py-3.5 px-6 font-semibold">Workers Needed</th>
+                  <th className="py-3.5 px-6 font-semibold">Deadline</th>
+                  <th className="py-3.5 px-6 font-semibold text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+                {tasks.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="py-14 text-center text-slate-400 dark:text-slate-500">
+                      <div className="flex flex-col items-center justify-center">
+                        <Briefcase className="w-12 h-12 text-indigo-400 mb-2.5 opacity-80" />
+                        <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                          No buyer tasks found!
+                        </p>
+                        <p className="text-xs text-slate-400 mt-1 max-w-sm">
+                          When buyers create and post micro-tasks, they will be listed here for administrative oversight.
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  tasks.map((task) => (
+                    <tr
+                      key={task._id}
+                      className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
+                    >
                       <td className="py-4 px-6">
-                        <div className="font-semibold text-slate-900 dark:text-white">
-                          {w.worker_name || 'Worker'}
+                        <div className="font-semibold text-slate-900 dark:text-white line-clamp-1 max-w-xs">
+                          {task.task_title}
                         </div>
-                        <div className="text-xs text-slate-400">
-                          {w.worker_email}
+                        <div className="text-xs text-slate-400 line-clamp-1 max-w-xs mt-0.5">
+                          {task.task_detail}
+                        </div>
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="font-medium text-slate-800 dark:text-slate-200 text-xs">
+                          {task.buyer_name || 'Buyer'}
+                        </div>
+                        <div className="text-[11px] text-slate-400 font-mono">
+                          {task.buyer_email || task.user_email}
                         </div>
                       </td>
                       <td className="py-4 px-6">
                         <span className="inline-flex items-center gap-1 font-bold text-amber-600 dark:text-amber-400">
                           <Coins className="w-3.5 h-3.5" />
-                          {w.withdrawal_coin}
+                          {task.payable_amount}
                         </span>
-                      </td>
-                      <td className="py-4 px-6 font-semibold text-emerald-600 dark:text-emerald-400">
-                        ${w.withdrawal_amount ? Number(w.withdrawal_amount).toFixed(2) : (w.withdrawal_coin / 20).toFixed(2)}
                       </td>
                       <td className="py-4 px-6">
-                        <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200">
-                          {w.payment_system}
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                          <Users className="w-3.5 h-3.5 text-primary" />
+                          {task.required_workers} slots
                         </span>
                       </td>
-                      <td className="py-4 px-6 font-mono text-xs text-slate-600 dark:text-slate-400">
-                        {w.account_number}
+                      <td className="py-4 px-6 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                        {task.completion_date || 'No deadline'}
                       </td>
                       <td className="py-4 px-6 text-right space-x-2 whitespace-nowrap">
                         <button
-                          onClick={() => handleApproveWithdrawal(w._id, w.worker_name, w.withdrawal_amount || (w.withdrawal_coin / 20).toFixed(2))}
-                          className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer"
+                          onClick={() => setSelectedTask(task)}
+                          className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold transition-colors cursor-pointer inline-flex items-center gap-1"
                         >
-                          Approve (Payment Success)
+                          <Eye className="w-3.5 h-3.5" />
+                          Inspect
                         </button>
                         <button
-                          onClick={() => handleRejectWithdrawal(w._id, w.worker_name)}
-                          className="px-3 py-1.5 rounded-lg bg-rose-500 hover:bg-rose-600 text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer"
+                          onClick={() => handleDeleteTask(task._id, task.task_title)}
+                          className="px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 text-xs font-semibold border border-rose-200 dark:border-rose-800/60 transition-colors cursor-pointer inline-flex items-center gap-1"
+                          title="Delete Buyer Task"
                         >
-                          Reject
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Delete
                         </button>
                       </td>
                     </tr>
@@ -481,22 +502,22 @@ const AdminHome = () => {
         )}
       </div>
 
-      {/* Submission Detail Modal */}
-      {selectedSubmission && (
+      {/* Buyer Task Inspection Modal */}
+      {selectedTask && (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
           <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden">
             <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400">
-                  <FileText className="w-5 h-5" />
+                  <Briefcase className="w-5 h-5" />
                 </div>
                 <h3 className="font-bold text-slate-900 dark:text-white text-base">
-                  Worker Submission Details
+                  Buyer Task Details
                 </h3>
               </div>
               <button
-                onClick={() => setSelectedSubmission(null)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                onClick={() => setSelectedTask(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -504,62 +525,80 @@ const AdminHome = () => {
 
             <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
               <div>
-                <label className="text-xs font-semibold text-slate-400 block mb-1">Task Title</label>
-                <p className="text-sm font-bold text-slate-900 dark:text-white">
-                  {selectedSubmission.task_title}
+                <label className="text-xs font-semibold text-slate-400 block mb-1">
+                  Task Title
+                </label>
+                <p className="text-base font-bold text-slate-900 dark:text-white">
+                  {selectedTask.task_title}
                 </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
-                  <span className="text-[11px] text-slate-400 block">Worker Name</span>
-                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                    {selectedSubmission.worker_name || 'Worker'}
+                  <span className="text-[11px] text-slate-400 block">Reward per Worker</span>
+                  <span className="text-xs font-extrabold text-amber-600 dark:text-amber-400 flex items-center gap-1 mt-0.5">
+                    <Coins className="w-3.5 h-3.5" />
+                    {selectedTask.payable_amount} Coins
                   </span>
                 </div>
                 <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
-                  <span className="text-[11px] text-slate-400 block">Reward Coins</span>
-                  <span className="text-xs font-extrabold text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                    <Coins className="w-3.5 h-3.5" />
-                    {selectedSubmission.payable_amount}
+                  <span className="text-[11px] text-slate-400 block">Worker Slots</span>
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-0.5 block">
+                    {selectedTask.required_workers} positions
                   </span>
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-400 block mb-1">Worker Email</label>
+                <label className="text-xs font-semibold text-slate-400 block mb-1">
+                  Posted By Buyer
+                </label>
                 <p className="text-xs font-medium text-slate-700 dark:text-slate-300 font-mono">
-                  {selectedSubmission.worker_email}
+                  {selectedTask.buyer_name || 'Buyer'} ({selectedTask.buyer_email || selectedTask.user_email})
                 </p>
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-400 block mb-1">Buyer Email</label>
-                <p className="text-xs font-medium text-slate-700 dark:text-slate-300 font-mono">
-                  {selectedSubmission.buyer_email || 'N/A'}
+                <label className="text-xs font-semibold text-slate-400 block mb-1">
+                  Completion Deadline
+                </label>
+                <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                  {selectedTask.completion_date || 'No deadline specified'}
                 </p>
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-400 block mb-1.5">Submitted Proof / Work</label>
+                <label className="text-xs font-semibold text-slate-400 block mb-1.5">
+                  Task Detail & Instructions
+                </label>
                 <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
-                  {selectedSubmission.submission_details || 'No details provided.'}
+                  {selectedTask.task_detail || 'No description provided.'}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-400 block mb-1.5">
+                  Submission Requirement
+                </label>
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
+                  {selectedTask.submission_info || 'Provide screenshot or text proof.'}
                 </div>
               </div>
             </div>
 
             <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3">
               <button
-                onClick={() => handleRejectSubmission(selectedSubmission)}
-                className="px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer"
+                onClick={() => setSelectedTask(null)}
+                className="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-semibold transition-colors cursor-pointer"
               >
-                Reject Submission
+                Close
               </button>
               <button
-                onClick={() => handleApproveSubmission(selectedSubmission)}
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer"
+                onClick={() => handleDeleteTask(selectedTask._id, selectedTask.task_title)}
+                className="px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer inline-flex items-center gap-1.5"
               >
-                Approve & Pay Coins
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete Task
               </button>
             </div>
           </div>
