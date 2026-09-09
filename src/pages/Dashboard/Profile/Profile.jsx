@@ -4,6 +4,7 @@ import { auth } from '../../../firebase/firebase.config';
 import Swal from 'sweetalert2';
 import useAuth from '../../../hooks/useAuth';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
+import { compressImageToBase64 } from '../../../utils/imageCompressor';
 import {
   User,
   Mail,
@@ -19,28 +20,30 @@ import {
   Clock,
   Sparkles,
   ExternalLink,
-  Edit3
+  Edit3,
+  X
 } from 'lucide-react';
 
 const Profile = () => {
-  const { user, role, coins, logOut, updateUserProfileState, fetchUser } = useAuth();
+  const { user, role, coins, updateUserProfileState, fetchUser } = useAuth();
   const axiosSecure = useAxiosSecure();
 
-  const [displayName, setDisplayName] = useState(user?.displayName || '');
-  const [photoURL, setPhotoURL] = useState(user?.photoURL || '');
+  const [displayName, setDisplayName] = useState(user?.displayName || user?.name || '');
+  const [photoURL, setPhotoURL] = useState(user?.photoURL || user?.photo || '');
   const [imageFile, setImageFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(user?.photoURL || '');
+  const [previewUrl, setPreviewUrl] = useState(user?.photoURL || user?.photo || '');
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [userStats, setUserStats] = useState(null);
 
-  const imgbbApiKey = import.meta.env.VITE_IMGBB_KEY || import.meta.env.VITE_API_KEY || '5e76ad9e8614e1fdc897a34af8e00cf4';
-
   useEffect(() => {
-    if (user?.displayName) setDisplayName(user.displayName);
-    if (user?.photoURL) {
-      setPhotoURL(user.photoURL);
-      setPreviewUrl(user.photoURL);
+    if (user?.displayName || user?.name) {
+      setDisplayName(user.displayName || user.name);
+    }
+    const currentPhoto = user?.photoURL || user?.photo;
+    if (currentPhoto) {
+      setPhotoURL(currentPhoto);
+      setPreviewUrl(currentPhoto);
     }
   }, [user]);
 
@@ -53,7 +56,7 @@ const Profile = () => {
           const res = await axiosSecure.get(`/api/worker-stats/${user.email}`);
           setUserStats(res.data);
         } else if (role === 'buyer') {
-          const res = await axiosSecure.get(`/api/buyer/stats/${user.email}`).catch(() => null);
+          const res = await axiosSecure.get(`/api/buyer-stats?email=${user.email}`).catch(() => null);
           if (res?.data) setUserStats(res.data);
         } else if (role === 'admin') {
           const res = await axiosSecure.get(`/api/admin/stats`).catch(() => null);
@@ -66,39 +69,38 @@ const Profile = () => {
     fetchUserStats();
   }, [user?.email, role]);
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const file = e.target.files?.[0];
     if (file) {
       setImageFile(file);
-      setPreviewUrl(URL.createObjectURL(file));
+      try {
+        const compressedBase64 = await compressImageToBase64(file, 350, 0.82);
+        setPreviewUrl(compressedBase64);
+        setPhotoURL(compressedBase64);
+      } catch (err) {
+        setPreviewUrl(URL.createObjectURL(file));
+      }
     }
   };
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user?.email) return;
     setIsSaving(true);
 
     try {
       let finalPhotoUrl = photoURL;
 
-      // Upload to imgBB if new file chosen
-      if (imageFile && imgbbApiKey) {
-        const formData = new FormData();
-        formData.append('image', imageFile);
-
-        const imgbbRes = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbApiKey}`, {
-          method: 'POST',
-          body: formData,
-        });
-        const imgbbData = await imgbbRes.json();
-        if (imgbbData?.success && imgbbData?.data?.url) {
-          finalPhotoUrl = imgbbData.data.url;
-          setPhotoURL(finalPhotoUrl);
+      // If a file was selected and not already compressed
+      if (imageFile && (!finalPhotoUrl || !finalPhotoUrl.startsWith('data:image'))) {
+        try {
+          finalPhotoUrl = await compressImageToBase64(imageFile, 350, 0.82);
+        } catch (imgErr) {
+          console.warn('Image compression fallback:', imgErr);
         }
       }
 
-      // 1. Update Firebase Auth Profile
+      // 1. Update Firebase Auth Profile if logged in with Firebase
       if (auth?.currentUser) {
         await updateProfile(auth.currentUser, {
           displayName,
@@ -107,27 +109,27 @@ const Profile = () => {
       }
 
       // 2. Update MongoDB Backend Profile
-      if (user?.email) {
-        await axiosSecure.patch(`/api/users/profile/${user.email}`, {
-          name: displayName,
-          photo: finalPhotoUrl,
-        });
-      }
+      await axiosSecure.patch(`/api/users/profile/${user.email}`, {
+        name: displayName,
+        photo: finalPhotoUrl,
+      });
 
       setPhotoURL(finalPhotoUrl);
       setPreviewUrl(finalPhotoUrl);
-      if (updateUserProfileState) {
+
+      // 3. Immediately update global client-side auth state
+      if (typeof updateUserProfileState === 'function') {
         updateUserProfileState(displayName, finalPhotoUrl);
       }
-      if (fetchUser) {
-        fetchUser();
+      if (typeof fetchUser === 'function') {
+        await fetchUser();
       }
 
       Swal.fire({
         icon: 'success',
         title: 'Profile Updated!',
-        text: 'Your profile details have been saved successfully.',
-        timer: 2000,
+        text: 'Your profile picture and details have been successfully saved.',
+        timer: 2200,
         showConfirmButton: false,
       });
 
@@ -138,7 +140,7 @@ const Profile = () => {
       Swal.fire({
         icon: 'error',
         title: 'Update Failed',
-        text: error.message || 'Could not update profile. Please try again.',
+        text: error.response?.data?.message || error.message || 'Could not update profile. Please try again.',
       });
     } finally {
       setIsSaving(false);
@@ -169,7 +171,7 @@ const Profile = () => {
               <img
                 src={previewUrl}
                 alt={displayName || 'User'}
-                className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl object-cover ring-4 ring-white/30 shadow-2xl"
+                className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl object-cover ring-4 ring-white/30 shadow-2xl bg-slate-800"
               />
             ) : (
               <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-gradient-to-tr from-amber-400 to-orange-500 text-white font-black text-3xl flex items-center justify-center ring-4 ring-white/30 shadow-2xl">
@@ -287,10 +289,10 @@ const Profile = () => {
                   </label>
                   
                   {/* File Upload */}
-                  <div className="flex items-center gap-3">
-                    <label className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer shadow-sm">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <label className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer shadow-sm">
                       <Upload className="w-3.5 h-3.5 text-indigo-500" />
-                      <span>Upload Image File</span>
+                      <span>Choose Image File</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -299,15 +301,15 @@ const Profile = () => {
                       />
                     </label>
                     {imageFile && (
-                      <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium truncate max-w-[200px]">
-                        ✓ {imageFile.name}
+                      <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium truncate max-w-[200px] flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> {imageFile.name}
                       </span>
                     )}
                   </div>
 
                   {/* Or URL input */}
                   <div>
-                    <span className="text-[11px] text-slate-400 block mb-1">Or paste Image URL:</span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 block mb-1">Or paste direct Image URL:</span>
                     <input
                       type="url"
                       value={photoURL}
@@ -316,7 +318,7 @@ const Profile = () => {
                         setPreviewUrl(e.target.value);
                       }}
                       placeholder="https://images.unsplash.com/..."
-                      className="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
                 </div>
@@ -354,8 +356,9 @@ const Profile = () => {
                     onClick={() => {
                       setIsEditing(false);
                       setImageFile(null);
-                      setDisplayName(user?.displayName || '');
-                      setPreviewUrl(user?.photoURL || '');
+                      setDisplayName(user?.displayName || user?.name || '');
+                      setPreviewUrl(user?.photoURL || user?.photo || '');
+                      setPhotoURL(user?.photoURL || user?.photo || '');
                     }}
                     className="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold transition-colors cursor-pointer"
                   >
@@ -421,7 +424,7 @@ const Profile = () => {
                   <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 flex items-center justify-between">
                     <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Total Tasks Posted</span>
                     <span className="text-sm font-bold text-slate-900 dark:text-white">
-                      {userStats?.totalTasks || 'Active'}
+                      {userStats?.totalTasks ?? 'Active'}
                     </span>
                   </div>
                 </>

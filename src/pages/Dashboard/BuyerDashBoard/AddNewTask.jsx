@@ -4,9 +4,7 @@ import { Plus, Coins, Calendar, Users, FileText, Image as ImageIcon, ArrowRight,
 import useAuth from '../../../hooks/useAuth';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 import { useNavigate } from 'react-router';
-
-const imgbbApiKey = import.meta.env.VITE_IMGBB_KEY;
-const imgbbUploadUrl = `https://api.imgbb.com/1/upload?key=${imgbbApiKey}`;
+import { compressImageToBase64 } from '../../../utils/imageCompressor';
 
 const AddNewTask = () => {
   const { user, coins, fetchUser } = useAuth();
@@ -34,11 +32,17 @@ const AddNewTask = () => {
     }
   };
 
-  const handleImageChange = (e) => {
+  const handleImageChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
       setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
+      try {
+        const compressedBase64 = await compressImageToBase64(file, 600, 0.82);
+        setImagePreview(compressedBase64);
+        setFormData(prev => ({ ...prev, task_image_url: compressedBase64 }));
+      } catch (err) {
+        setImagePreview(URL.createObjectURL(file));
+      }
     }
   };
 
@@ -71,19 +75,12 @@ const AddNewTask = () => {
 
     setLoading(true);
 
-    // Upload image to imgBB if file selected
     let imageUrl = formData.task_image_url;
-    if (imageFile && imgbbApiKey) {
+    if (imageFile && (!imageUrl || !imageUrl.startsWith('data:image'))) {
       try {
-        const imgData = new FormData();
-        imgData.append('image', imageFile);
-        const imgRes = await fetch(imgbbUploadUrl, { method: 'POST', body: imgData });
-        const imgJson = await imgRes.json();
-        if (imgJson?.success && imgJson?.data?.url) {
-          imageUrl = imgJson.data.url;
-        }
+        imageUrl = await compressImageToBase64(imageFile, 600, 0.82);
       } catch (uploadErr) {
-        console.warn('Image upload failed, using URL fallback:', uploadErr);
+        console.warn('Image compression fallback:', uploadErr);
       }
     }
 

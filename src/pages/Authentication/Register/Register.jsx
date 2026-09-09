@@ -5,9 +5,7 @@ import { AuthContext } from '../../../contexts/AuthContext';
 import { updateProfile } from 'firebase/auth';
 import useAxios from '../../../hooks/useAxios';
 import { UserPlus, Coins, ShieldCheck, Sparkles } from 'lucide-react';
-
-const imgbbApiKey = import.meta.env.VITE_API_KEY;
-const imgbbUploadUrl = `https://api.imgbb.com/1/upload?key=${imgbbApiKey}`;
+import { compressImageToBase64 } from '../../../utils/imageCompressor';
 
 const Register = () => {
   const { createUser, GoogleSignIn, setErrorMessage, errorMessage } = useContext(AuthContext);
@@ -20,13 +18,11 @@ const Register = () => {
   const handleRegister = async (e) => {
     e.preventDefault();
     const form = e.target;
-    const formData = new FormData(form);
-
-    const name = formData.get('name');
-    const email = formData.get('email');
-    const password = formData.get('password');
-    const selectedRole = formData.get('role');
-    const imageFile = formData.get('photo');
+    const name = form.name.value;
+    const email = form.email.value;
+    const password = form.password.value;
+    const imageFile = form.photo?.files?.[0];
+    const selectedRole = role;
 
     setErrorMessage('');
 
@@ -40,22 +36,11 @@ const Register = () => {
     try {
       let photoUrl = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop&crop=face';
 
-      if (imageFile && imageFile.size > 0 && imgbbApiKey) {
+      if (imageFile && imageFile.size > 0) {
         try {
-          const imageData = new FormData();
-          imageData.append('image', imageFile);
-
-          const imgbbRes = await fetch(imgbbUploadUrl, {
-            method: 'POST',
-            body: imageData,
-          });
-
-          const imgbbData = await imgbbRes.json();
-          if (imgbbData?.success && imgbbData?.data?.url) {
-            photoUrl = imgbbData.data.url;
-          }
+          photoUrl = await compressImageToBase64(imageFile, 350, 0.82);
         } catch (uploadErr) {
-          console.warn('Image upload skipped or failed, using default avatar', uploadErr);
+          console.warn('Image compression fallback:', uploadErr);
         }
       }
 

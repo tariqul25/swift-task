@@ -1,5 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Coins, Users, CalendarCheck, Clock, CheckCircle, X, ArrowRight, Briefcase, Eye, FileText, CheckCircle2 } from 'lucide-react';
+import {
+  Coins,
+  Users,
+  CalendarCheck,
+  Clock,
+  CheckCircle,
+  X,
+  ArrowRight,
+  Briefcase,
+  Eye,
+  FileText,
+  CheckCircle2,
+  AlertCircle,
+  Sparkles
+} from 'lucide-react';
 import { Link } from 'react-router';
 import useAuth from '../../../hooks/useAuth';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
@@ -7,9 +21,9 @@ import Swal from 'sweetalert2';
 import Loading from '../../../Loading';
 
 const TaskList = () => {
-  const { user } = useAuth();
+  const { user, fetchUser, updateUserCoins } = useAuth();
   const [tasks, setTasks] = useState([]);
-  const [submittedTaskIds, setSubmittedTaskIds] = useState([]);
+  const [userSubmissions, setUserSubmissions] = useState([]);
   const [selectedTask, setSelectedTask] = useState(null);
   const [submissionDetails, setSubmissionDetails] = useState('');
   const [loading, setLoading] = useState(true);
@@ -17,29 +31,41 @@ const TaskList = () => {
   const [filterTab, setFilterTab] = useState('all'); // 'all', 'available', 'submitted'
   const axiosSecure = useAxiosSecure();
 
+  const fetchTasks = async () => {
+    try {
+      const res = await axiosSecure.get(`/api/tasks`);
+      setTasks(res.data || []);
+    } catch (err) {
+      console.error('Error fetching tasks:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchSubmissions = async () => {
+    if (!user?.email) return;
+    try {
+      const res = await axiosSecure.get(`/api/submitted-task-ids/${user.email}`);
+      setUserSubmissions(res.data || []);
+    } catch (err) {
+      console.error('Failed to fetch user submissions:', err);
+    }
+  };
+
   useEffect(() => {
-    axiosSecure
-      .get(`/api/tasks`)
-      .then(res => {
-        setTasks(res.data || []);
-      })
-      .catch(err => {
-        console.error('Error fetching tasks:', err);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+    fetchTasks();
   }, []);
 
   useEffect(() => {
-    if (!user?.email) return;
-
-    axiosSecure.get(`/api/submitted-task-ids/${user.email}`)
-      .then(res => {
-        setSubmittedTaskIds(res.data || []);
-      })
-      .catch(err => console.error('Failed to fetch submitted IDs:', err));
+    fetchSubmissions();
   }, [user?.email]);
+
+  const getUserSubmission = (taskId) => {
+    return userSubmissions.find((s) => {
+      const subTaskId = typeof s === 'string' ? s : (s.task_id || s._id);
+      return String(subTaskId) === String(taskId);
+    });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -59,14 +85,26 @@ const TaskList = () => {
       worker_name: user.displayName || user.name || 'Worker',
       submission_details: submissionDetails,
       current_date: new Date().toISOString(),
-      status: 'pending'
+      status: 'pending',
     };
 
     try {
       await axiosSecure.post(`/api/apply-task`, doc);
-      setSubmittedTaskIds(prev => [...prev, selectedTask._id]);
-      // Update local task slot count
-      setTasks(prev => prev.map(t => t._id === selectedTask._id ? { ...t, required_workers: Math.max(0, t.required_workers - 1) } : t));
+      // Update local submissions list
+      setUserSubmissions((prev) => [
+        ...prev.filter((s) => (s.task_id || s._id || s) !== selectedTask._id),
+        doc,
+      ]);
+
+      // Decrement required slots locally
+      setTasks((prev) =>
+        prev.map((t) =>
+          t._id === selectedTask._id
+            ? { ...t, required_workers: Math.max(0, (Number(t.required_workers) || 1) - 1) }
+            : t
+        )
+      );
+
       setSelectedTask(null);
       setSubmissionDetails('');
 
@@ -77,6 +115,10 @@ const TaskList = () => {
         timer: 2500,
         showConfirmButton: false,
       });
+
+      if (typeof fetchUser === 'function') {
+        fetchUser();
+      }
     } catch (err) {
       console.error('Submission failed:', err);
       Swal.fire({
@@ -91,12 +133,25 @@ const TaskList = () => {
 
   if (loading) return <Loading />;
 
-  const availableTasks = tasks.filter(t => !submittedTaskIds.includes(t._id) && Number(t.required_workers || 0) > 0);
-  const submittedTasks = tasks.filter(t => submittedTaskIds.includes(t._id));
+  // Filter tasks based on real submission records
+  const availableTasks = tasks.filter((t) => {
+    const sub = getUserSubmission(t._id);
+    const isSubmittedAndActive = sub && sub.status !== 'rejected';
+    return !isSubmittedAndActive && Number(t.required_workers || 0) > 0;
+  });
+
+  const submittedTasks = tasks.filter((t) => {
+    const sub = getUserSubmission(t._id);
+    return !!sub;
+  });
 
   let displayTasks = tasks;
   if (filterTab === 'available') displayTasks = availableTasks;
   else if (filterTab === 'submitted') displayTasks = submittedTasks;
+
+  const activeSubForSelected = selectedTask ? getUserSubmission(selectedTask._id) : null;
+  const isSelectedAlreadySubmitted =
+    activeSubForSelected && activeSubForSelected.status !== 'rejected';
 
   return (
     <div className="space-y-8">
@@ -160,25 +215,46 @@ const TaskList = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {displayTasks.map(task => {
-            const isSubmitted = submittedTaskIds.includes(task._id);
+          {displayTasks.map((task) => {
+            const userSub = getUserSubmission(task._id);
+            const status = userSub?.status;
 
             return (
               <div
                 key={task._id}
                 className={`p-6 rounded-3xl bg-white dark:bg-slate-900 border shadow-sm hover:shadow-xl transition-all flex flex-col justify-between group ${
-                  isSubmitted
+                  status === 'approved'
+                    ? 'border-emerald-400/40 dark:border-emerald-500/30'
+                    : status === 'pending'
                     ? 'border-amber-400/40 dark:border-amber-500/30'
+                    : status === 'rejected'
+                    ? 'border-rose-400/40 dark:border-rose-500/30'
                     : 'border-slate-200/80 dark:border-slate-800 hover:border-indigo-500/40'
                 }`}
               >
                 <div>
                   {/* Status Banner */}
-                  {isSubmitted ? (
+                  {status === 'approved' ? (
+                    <div className="mb-3 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 flex items-center justify-between text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                      <span className="flex items-center gap-1.5">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                        Approved & Paid (+{task.payable_amount} Coins)
+                      </span>
+                      <span className="text-[10px] opacity-75">{task.required_workers} slots left</span>
+                    </div>
+                  ) : status === 'pending' ? (
                     <div className="mb-3 px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 flex items-center justify-between text-xs font-bold text-amber-700 dark:text-amber-400">
                       <span className="flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5" />
+                        <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                         You Submitted (Pending Review)
+                      </span>
+                      <span className="text-[10px] opacity-75">{task.required_workers} slots left</span>
+                    </div>
+                  ) : status === 'rejected' ? (
+                    <div className="mb-3 px-3 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 flex items-center justify-between text-xs font-bold text-rose-700 dark:text-rose-400">
+                      <span className="flex items-center gap-1.5">
+                        <AlertCircle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+                        Rejected (Re-apply Available)
                       </span>
                       <span className="text-[10px] opacity-75">{task.required_workers} slots left</span>
                     </div>
@@ -214,13 +290,29 @@ const TaskList = () => {
                     </p>
                   </div>
 
-                  {isSubmitted ? (
+                  {status === 'approved' ? (
+                    <button
+                      onClick={() => setSelectedTask(task)}
+                      className="px-3.5 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 text-xs font-bold border border-emerald-200 dark:border-emerald-800 transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>View Approved Work</span>
+                    </button>
+                  ) : status === 'pending' ? (
                     <button
                       onClick={() => setSelectedTask(task)}
                       className="px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 dark:hover:bg-amber-900/60 text-amber-700 dark:text-amber-300 text-xs font-bold border border-amber-200 dark:border-amber-800 transition-all cursor-pointer flex items-center gap-1.5"
                     >
-                      <Eye className="w-3.5 h-3.5" />
+                      <Eye className="w-3.5 h-3.5 text-amber-600" />
                       <span>View Submission</span>
+                    </button>
+                  ) : status === 'rejected' ? (
+                    <button
+                      onClick={() => setSelectedTask(task)}
+                      className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md shadow-rose-600/20 transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      <span>Re-apply & Submit</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   ) : (
                     <button
@@ -259,31 +351,82 @@ const TaskList = () => {
               {selectedTask.task_title}
             </h2>
 
-            {/* If already submitted by user */}
-            {submittedTaskIds.includes(selectedTask._id) ? (
+            {/* Check current user submission status */}
+            {activeSubForSelected?.status === 'approved' ? (
               <div className="space-y-4 my-4">
-                <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 flex items-center gap-3">
-                  <Clock className="w-6 h-6 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 flex items-start gap-3">
+                  <CheckCircle2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
                   <div>
-                    <span className="text-xs font-bold text-amber-800 dark:text-amber-300 block">
-                      Submission Received (Pending Buyer Approval)
+                    <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 block">
+                      Work Approved & Coins Disbursed!
                     </span>
-                    <span className="text-[11px] text-amber-700/80 dark:text-amber-400/80">
-                      You have already submitted your work for this task. You cannot submit twice. The buyer is reviewing your submission.
+                    <span className="text-[11px] text-emerald-700/90 dark:text-emerald-400/90 leading-relaxed block mt-0.5">
+                      Your submission was reviewed and approved. <strong>+{selectedTask.payable_amount} coins</strong> have been credited to your profile balance!
                     </span>
                   </div>
                 </div>
+
+                {activeSubForSelected.submission_details && (
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/60">
+                    <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block mb-1">
+                      Your Submitted Proof:
+                    </span>
+                    <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed">
+                      {activeSubForSelected.submission_details}
+                    </p>
+                  </div>
+                )}
+
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/60 space-y-2 text-xs sm:text-sm text-slate-600 dark:text-slate-300">
+                  <p><strong>Buyer:</strong> {selectedTask.buyer_name} ({selectedTask.buyer_email})</p>
+                  <p><strong>Task Deadline:</strong> {selectedTask.completion_date}</p>
+                </div>
+
+                <div className="flex justify-between items-center pt-2">
+                  <Link
+                    to="/dashboard/my-submission"
+                    className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    Check in My Submissions
+                  </Link>
+                  <button
+                    onClick={() => setSelectedTask(null)}
+                    className="px-5 py-2.5 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-white text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            ) : activeSubForSelected?.status === 'pending' ? (
+              <div className="space-y-4 my-4">
+                <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 flex items-start gap-3">
+                  <Clock className="w-6 h-6 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <span className="text-xs font-bold text-amber-800 dark:text-amber-300 block">
+                      Submission Received (Pending Review)
+                    </span>
+                    <span className="text-[11px] text-amber-700/90 dark:text-amber-400/90 leading-relaxed block mt-0.5">
+                      You have already submitted your work for this task. The buyer or platform admin is reviewing your submission. You will receive coins once approved.
+                    </span>
+                  </div>
+                </div>
+
+                {activeSubForSelected.submission_details && (
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/60">
+                    <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block mb-1">
+                      Your Submitted Proof:
+                    </span>
+                    <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed">
+                      {activeSubForSelected.submission_details}
+                    </p>
+                  </div>
+                )}
 
                 <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/60 space-y-2 text-xs sm:text-sm text-slate-600 dark:text-slate-300">
                   <p><strong>Buyer:</strong> {selectedTask.buyer_name} ({selectedTask.buyer_email})</p>
                   <p><strong>Remaining Slots for Others:</strong> {selectedTask.required_workers} workers</p>
                   <p><strong>Deadline:</strong> {selectedTask.completion_date}</p>
-                  <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
-                    <p className="font-semibold text-slate-900 dark:text-white mb-1">Instructions:</p>
-                    <p className="text-slate-600 dark:text-slate-400 leading-relaxed whitespace-pre-line text-xs">
-                      {selectedTask.task_detail}
-                    </p>
-                  </div>
                 </div>
 
                 <div className="flex justify-between items-center pt-2">
@@ -304,6 +447,20 @@ const TaskList = () => {
               </div>
             ) : (
               <>
+                {activeSubForSelected?.status === 'rejected' && (
+                  <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 flex items-start gap-3 mb-4">
+                    <AlertCircle className="w-5 h-5 text-rose-600 dark:text-rose-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <span className="text-xs font-bold text-rose-800 dark:text-rose-300 block">
+                        Previous Submission Was Rejected
+                      </span>
+                      <span className="text-[11px] text-rose-700/90 dark:text-rose-400/90 leading-relaxed block mt-0.5">
+                        Your previous submission was not accepted. Please review the instructions carefully and submit improved proof below.
+                      </span>
+                    </div>
+                  </div>
+                )}
+
                 <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/60 space-y-2 text-xs sm:text-sm text-slate-600 dark:text-slate-300 mb-6">
                   <p><strong>Buyer:</strong> {selectedTask.buyer_name} ({selectedTask.buyer_email})</p>
                   <p><strong>Deadline:</strong> {selectedTask.completion_date}</p>
@@ -334,7 +491,7 @@ const TaskList = () => {
                       required
                       rows="4"
                       value={submissionDetails}
-                      onChange={e => setSubmissionDetails(e.target.value)}
+                      onChange={(e) => setSubmissionDetails(e.target.value)}
                       className="w-full p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-400"
                       placeholder="Paste links, screenshots URLs, or proof text as requested by the buyer..."
                     />
