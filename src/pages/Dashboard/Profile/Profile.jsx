@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { updateProfile } from 'firebase/auth';
+import { auth } from '../../../firebase/firebase.config';
 import Swal from 'sweetalert2';
 import useAuth from '../../../hooks/useAuth';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
@@ -98,16 +99,23 @@ const Profile = () => {
       }
 
       // 1. Update Firebase Auth Profile
-      await updateProfile(user, {
-        displayName,
-        photoURL: finalPhotoUrl,
-      });
+      if (auth?.currentUser) {
+        await updateProfile(auth.currentUser, {
+          displayName,
+          photoURL: finalPhotoUrl,
+        });
+      }
 
       // 2. Update MongoDB Backend Profile
-      await axiosSecure.patch(`/api/users/profile/${user.email}`, {
-        name: displayName,
-        photo: finalPhotoUrl,
-      });
+      if (user?.email) {
+        await axiosSecure.patch(`/api/users/profile/${user.email}`, {
+          name: displayName,
+          photo: finalPhotoUrl,
+        });
+      }
+
+      setPhotoURL(finalPhotoUrl);
+      setPreviewUrl(finalPhotoUrl);
 
       Swal.fire({
         icon: 'success',
