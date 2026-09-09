@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import Swal from 'sweetalert2';
-import { Plus, DollarSign } from 'lucide-react';
+import { Plus, Coins, Calendar, Users, FileText, Image as ImageIcon, ArrowRight } from 'lucide-react';
 import useAuth from '../../../hooks/useAuth';
-import axios from 'axios';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
+import { useNavigate } from 'react-router';
 
 const AddNewTask = () => {
-  const { user, coins, fetchUser } = useAuth(); // 🔁 fetchUser for instant update
+  const { user, coins, fetchUser } = useAuth();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     task_title: '',
     task_detail: '',
@@ -16,15 +17,15 @@ const AddNewTask = () => {
     submission_info: '',
     task_image_url: ''
   });
-  const axiosSecure = useAxiosSecure()
+  const [loading, setLoading] = useState(false);
+  const axiosSecure = useAxiosSecure();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-
     if (name === 'required_workers' || name === 'payable_amount') {
       setFormData({
         ...formData,
-        [name]: parseInt(value) || 0, 
+        [name]: parseInt(value) || 0,
       });
     } else {
       setFormData({
@@ -34,31 +35,38 @@ const AddNewTask = () => {
     }
   };
 
+  const totalPayableAmount =
+    (parseInt(formData.required_workers) || 0) * (parseInt(formData.payable_amount) || 0);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const totalPayableAmount =
-      parseInt(formData.required_workers) * parseInt(formData.payable_amount);
+    if (totalPayableAmount <= 0) {
+      Swal.fire('Invalid Input', 'Required workers and payable amount must be greater than zero.', 'warning');
+      return;
+    }
 
     if (totalPayableAmount > (coins || 0)) {
       Swal.fire({
         title: 'Insufficient Coins',
-        text: 'Not enough coins. Please purchase more.',
+        text: `This task requires ${totalPayableAmount} coins, but your balance is ${coins || 0} coins. Please top up your wallet.`,
         icon: 'warning',
-        confirmButtonText: 'Purchase Coins'
+        showCancelButton: true,
+        confirmButtonText: 'Purchase Coins Now',
+        cancelButtonText: 'Cancel'
       }).then((result) => {
         if (result.isConfirmed) {
-          window.location.href = '/dashboard/purchase';
+          navigate('/dashboard/purchase');
         }
       });
       return;
     }
 
+    setLoading(true);
     const newTask = {
       ...formData,
       buyer_email: user?.email,
-      buyer_name: user?.displayName,
+      buyer_name: user?.displayName || user?.name || 'Buyer',
       buyer_id: user?.uid || user?.id,
       total_cost: totalPayableAmount,
       status: 'active',
@@ -66,163 +74,207 @@ const AddNewTask = () => {
     };
 
     try {
-      // ✅ 1. Create Task
-      const taskRes = await axiosSecure.post(
-        `${import.meta.env.VITE_BACKEND_URL}/api/tasks`,
-        newTask
-      );
+      // 1. Create Task
+      const taskRes = await axiosSecure.post(`/api/tasks`, newTask);
 
-      // ✅ 2. Deduct Coins
-      if (taskRes.data.insertedId) {
+      // 2. Deduct Coins
+      if (taskRes.data?.insertedId || taskRes.status === 201) {
         await axiosSecure.patch(
-          `${import.meta.env.VITE_BACKEND_URL}/api/users/coins/${user?.email}`,
-          { coins: coins - totalPayableAmount }
+          `/api/users/coins/${user?.email}`,
+          { coins: (coins || 0) - totalPayableAmount }
         );
-        // ✅ 3. Refetch user to update coin instantly
+
         if (typeof fetchUser === 'function') {
           await fetchUser();
         }
 
         Swal.fire({
           icon: 'success',
-          title: 'Task Created!',
-          text: 'Task created and coins deducted successfully!'
+          title: 'Task Created & Funded!',
+          text: `Task published and ${totalPayableAmount} coins deposited into escrow.`,
+          timer: 2000,
+          showConfirmButton: false,
         });
+
+        navigate('/dashboard/my-tasks');
       }
     } catch (err) {
-      console.error("Task creation or coin update error:", err);
+      console.error("Task creation error:", err);
       Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: 'Something went wrong while creating the task.',
+        text: 'Something went wrong while publishing the task.',
       });
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg p-6 text-white">
-        <h1 className="text-3xl font-bold mb-2">Add New Task</h1>
-        <p className="text-purple-100">Create a new task for workers to complete</p>
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Header Banner */}
+      <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-primary via-indigo-600 to-purple-600 text-white shadow-xl">
+        <h1 className="text-2xl sm:text-3xl font-black">Publish New Campaign</h1>
+        <p className="mt-1 text-white/80 text-xs sm:text-sm">
+          Distribute your tasks to thousands of active workers with automatic escrow payouts.
+        </p>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm p-6">
+      {/* Form Card */}
+      <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm">
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Title & Image URL */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label htmlFor="task_title" className="block text-sm font-medium text-gray-700 mb-2">Task Title *</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
+                Task Title *
+              </label>
               <input
                 type="text"
-                id="task_title"
                 name="task_title"
                 value={formData.task_title}
                 onChange={handleChange}
+                placeholder="e.g., Download App & Leave Honest Review"
                 required
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
             <div>
-              <label htmlFor="task_image_url" className="block text-sm font-medium text-gray-700 mb-2">Task Image URL</label>
-              <input
-                type="url"
-                id="task_image_url"
-                name="task_image_url"
-                value={formData.task_image_url}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
+                Task Cover Image URL (Optional)
+              </label>
+              <div className="relative">
+                <ImageIcon className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="url"
+                  name="task_image_url"
+                  value={formData.task_image_url}
+                  onChange={handleChange}
+                  placeholder="https://images.unsplash.com/..."
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
             </div>
           </div>
 
           {/* Details */}
           <div>
-            <label htmlFor="task_detail" className="block text-sm font-medium text-gray-700 mb-2">Task Details *</label>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
+              Detailed Task Instructions *
+            </label>
             <textarea
-              id="task_detail"
               name="task_detail"
               value={formData.task_detail}
               onChange={handleChange}
               required
               rows="4"
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-            ></textarea>
+              placeholder="Step-by-step requirements for workers to follow..."
+              className="w-full p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            />
           </div>
 
-          {/* Workers, Pay, Completion */}
+          {/* Numerical Config: Workers, Pay, Completion */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
-              <label htmlFor="required_workers" className="block text-sm font-medium text-gray-700 mb-2">Required Workers *</label>
-              <input
-                type="number"
-                id="required_workers"
-                name="required_workers"
-                value={formData.required_workers}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border rounded-lg"
-              />
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
+                Required Workers *
+              </label>
+              <div className="relative">
+                <Users className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="number"
+                  name="required_workers"
+                  value={formData.required_workers}
+                  onChange={handleChange}
+                  min={1}
+                  required
+                  placeholder="e.g. 50"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
             </div>
+
             <div>
-              <label htmlFor="payable_amount" className="block text-sm font-medium text-gray-700 mb-2">Payable Amount *</label>
-              <input
-                type="number"
-                id="payable_amount"
-                name="payable_amount"
-                value={formData.payable_amount}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border rounded-lg"
-              />
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
+                Coins Per Worker *
+              </label>
+              <div className="relative">
+                <Coins className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="number"
+                  name="payable_amount"
+                  value={formData.payable_amount}
+                  onChange={handleChange}
+                  min={1}
+                  required
+                  placeholder="e.g. 10"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
             </div>
+
             <div>
-              <label htmlFor="completion_date" className="block text-sm font-medium text-gray-700 mb-2">Completion Date *</label>
-              <input
-                type="date"
-                id="completion_date"
-                name="completion_date"
-                value={formData.completion_date}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border rounded-lg"
-              />
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
+                Completion Deadline *
+              </label>
+              <div className="relative">
+                <Calendar className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="date"
+                  name="completion_date"
+                  value={formData.completion_date}
+                  onChange={handleChange}
+                  required
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
             </div>
           </div>
 
-          {/* Submission */}
+          {/* Submission Info */}
           <div>
-            <label htmlFor="submission_info" className="block text-sm font-medium text-gray-700 mb-2">Submission Info *</label>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
+              Submission Proof Requirements *
+            </label>
             <textarea
-              id="submission_info"
               name="submission_info"
               value={formData.submission_info}
               onChange={handleChange}
               required
               rows="3"
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-            ></textarea>
+              placeholder="Specify what proof worker must submit (e.g., screenshot link, username, order ID)..."
+              className="w-full p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            />
           </div>
 
-          {/* Coin Info */}
-          {formData.required_workers && formData.payable_amount && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-center space-x-2">
-                <DollarSign className="w-5 h-5 text-blue-600" />
-                <span className="font-medium text-blue-800">
-                  Total Cost: {parseInt(formData.required_workers) * parseInt(formData.payable_amount)} coins
+          {/* Escrow Cost Card */}
+          <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <Coins className="w-4 h-4 text-amber-500 fill-amber-500" />
+                <span className="font-bold text-amber-900 dark:text-amber-200 text-sm">
+                  Total Escrow Cost: {totalPayableAmount} Coins (${(totalPayableAmount / 20).toFixed(2)})
                 </span>
               </div>
-              <p className="text-sm text-blue-600 mt-1">Your current balance: {coins || 0} coins</p>
+              <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+                Your available balance: {coins || 0} Coins
+              </p>
             </div>
-          )}
+            {totalPayableAmount > (coins || 0) && (
+              <span className="text-xs font-bold text-rose-600 dark:text-rose-400">
+                Insufficient coins (need {totalPayableAmount - (coins || 0)} more)
+              </span>
+            )}
+          </div>
 
-          {/* Submit */}
+          {/* Submit Button */}
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
+            disabled={loading}
+            className="w-full py-3.5 rounded-2xl bg-primary hover:bg-primary-hover text-white font-bold text-sm shadow-xl shadow-primary/25 disabled:opacity-50 transition-all cursor-pointer flex items-center justify-center gap-2"
           >
             <Plus className="w-5 h-5" />
-            <span>Add Task</span>
+            <span>{loading ? 'Publishing Task...' : 'Publish Task to Marketplace'}</span>
           </button>
         </form>
       </div>

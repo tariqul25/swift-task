@@ -41,17 +41,22 @@ const AuthProvider = ({ children }) => {
     return signInWithPopup(auth, provider);
   };
 
-const updateUserCoins = async () => {
-  try {
-    const res = await axiosInstance.get(`/api/user/coins?email=${user?.email}`);
-    const updatedCoin = res.data.coin;
-
-    setUser(prev => ({ ...prev, coins: updatedCoin }));
-    console.log(setUser, setUser.coins);
-  } catch (error) {
-    console.error('Failed to update coins', error);
-  }
-};
+  const updateUserCoins = async (explicitCoins) => {
+    if (typeof explicitCoins === 'number') {
+      setUser(prev => ({ ...prev, coins: explicitCoins }));
+      setCoins(explicitCoins);
+      return;
+    }
+    if (!user?.email) return;
+    try {
+      const res = await axiosInstance.get(`/api/user/coins?email=${user?.email}`);
+      const updatedCoin = res.data?.coin ?? 0;
+      setUser(prev => ({ ...prev, coins: updatedCoin }));
+      setCoins(updatedCoin);
+    } catch (error) {
+      console.error('Failed to update coins', error);
+    }
+  };
 
 
 

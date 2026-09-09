@@ -1,17 +1,14 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Clock, CheckCircle2, XCircle, AlertCircle, FileText, ChevronLeft, ChevronRight, Coins } from 'lucide-react';
 import { AuthContext } from '../../../contexts/AuthContext';
-import useAxios from '../../../hooks/useAxios';
 import useAxiosSecure from '../../../hooks/useAxiosSecure';
 
 const MySubmissions = () => {
   const { user } = useContext(AuthContext);
-  const axiosInstance = useAxios();
-  const axiosSecure=useAxiosSecure()
+  const axiosSecure = useAxiosSecure();
 
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const [currentPage, setCurrentPage] = useState(1);
   const submissionsPerPage = 10;
   const [totalPages, setTotalPages] = useState(1);
@@ -23,128 +20,155 @@ const MySubmissions = () => {
     axiosSecure
       .get(`/api/submissions/${user.email}?page=${currentPage}&limit=${submissionsPerPage}`)
       .then(res => {
-        setSubmissions(res.data.submissions);
-        setTotalPages(Math.ceil(res.data.totalCount / submissionsPerPage));
-        setLoading(false);
+        setSubmissions(res.data?.submissions || []);
+        setTotalPages(Math.ceil((res.data?.totalCount || 0) / submissionsPerPage) || 1);
       })
       .catch(err => {
         console.error('Failed to fetch submissions:', err);
+      })
+      .finally(() => {
         setLoading(false);
       });
   }, [user, currentPage]);
 
-  const getStatusIcon = (status) => {
-    switch (status) {
+  const getStatusBadge = (status) => {
+    switch (status?.toLowerCase()) {
       case 'approved':
-        return <CheckCircle className="w-5 h-5 text-green-500" />;
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            Approved
+          </span>
+        );
       case 'rejected':
-        return <XCircle className="w-5 h-5 text-red-500" />;
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300">
+            <XCircle className="w-3.5 h-3.5" />
+            Rejected
+          </span>
+        );
       case 'pending':
-        return <Clock className="w-5 h-5 text-yellow-500" />;
       default:
-        return <AlertCircle className="w-5 h-5 text-gray-500" />;
-    }
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'approved':
-        return 'text-green-600 bg-green-100';
-      case 'rejected':
-        return 'text-red-600 bg-red-100';
-      case 'pending':
-        return 'text-yellow-600 bg-yellow-100';
-      default:
-        return 'text-gray-600 bg-gray-100';
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300">
+            <Clock className="w-3.5 h-3.5" />
+            Pending Review
+          </span>
+        );
     }
   };
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleString();
+    try {
+      return new Date(dateString).toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+    } catch {
+      return dateString;
+    }
   };
-
-  const handlePrevious = () => {
-    if (currentPage > 1) setCurrentPage(prev => prev - 1);
-  };
-
-  const handleNext = () => {
-    if (currentPage < totalPages) setCurrentPage(prev => prev + 1);
-  };
-
-  if (loading) {
-    return (
-      <div className="text-center py-10">
-        <div className="animate-spin h-10 w-10 border-4 border-blue-500 border-t-transparent rounded-full mx-auto" />
-        <p className="text-gray-500 mt-4">Loading submissions...</p>
-      </div>
-    );
-  }
-
-  if (!submissions?.length) {
-    return (
-      <div className="text-center py-10 text-gray-600">
-        <p>You have no submissions yet.</p>
-      </div>
-    );
-  }
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-6">My Submissions</h1>
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 border">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Task Title</th>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Buyer Name</th>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submitted On</th>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payable Amount</th>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submission Details</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {submissions.map((sub) => (
-              <tr key={sub._id || sub.task_id}>
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{sub.task_title}</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{sub.buyer_name}</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">{formatDate(sub.current_date)}</td>
-                <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{sub.payable_amount} coins</td>
-                <td className="px-4 py-2 whitespace-nowrap">
-                  <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold capitalize ${getStatusColor(sub.status)}`}>
-                    {getStatusIcon(sub.status)}
-                    <span className="ml-1">{sub.status}</span>
-                  </div>
-                </td>
-                <td className="px-4 py-2 text-sm text-gray-700 max-w-xs truncate">
-                  {sub.submission_details || 'No details provided'}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2.5">
+            <FileText className="w-6 h-6 text-primary" />
+            My Task Submissions
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Track validation statuses and coin payouts from buyer reviews.
+          </p>
+        </div>
       </div>
 
-      {/* Pagination */}
-      <div className="mt-6 flex justify-center items-center space-x-4">
-        <button
-          onClick={handlePrevious}
-          disabled={currentPage === 1}
-          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded disabled:opacity-50"
-        >
-          Previous
-        </button>
-        <span className="text-sm text-gray-700">
-          Page {currentPage} of {totalPages}
-        </span>
-        <button
-          onClick={handleNext}
-          disabled={currentPage === totalPages}
-          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded disabled:opacity-50"
-        >
-          Next
-        </button>
+      {/* Table Card */}
+      <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">
+              <tr>
+                <th className="py-3.5 px-6 font-semibold">Task Title</th>
+                <th className="py-3.5 px-6 font-semibold">Buyer Name</th>
+                <th className="py-3.5 px-6 font-semibold">Submitted On</th>
+                <th className="py-3.5 px-6 font-semibold">Payable Reward</th>
+                <th className="py-3.5 px-6 font-semibold">Status</th>
+                <th className="py-3.5 px-6 font-semibold">Submission Proof</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200/80 dark:divide-slate-800 text-slate-700 dark:text-slate-300">
+              {loading ? (
+                <tr>
+                  <td colSpan="6" className="py-12 text-center text-slate-400">
+                    <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto" />
+                    <p className="mt-3 text-xs">Loading submission records...</p>
+                  </td>
+                </tr>
+              ) : submissions.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="py-12 text-center text-slate-400">
+                    No submissions found. Browse tasks to get started!
+                  </td>
+                </tr>
+              ) : (
+                submissions.map((sub) => (
+                  <tr key={sub._id || sub.task_id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                    <td className="py-4 px-6 font-semibold text-slate-900 dark:text-white max-w-xs truncate">
+                      {sub.task_title}
+                    </td>
+                    <td className="py-4 px-6 text-slate-600 dark:text-slate-400">
+                      {sub.buyer_name || 'Buyer'}
+                    </td>
+                    <td className="py-4 px-6 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                      {formatDate(sub.current_date)}
+                    </td>
+                    <td className="py-4 px-6">
+                      <span className="inline-flex items-center gap-1 font-bold text-amber-600 dark:text-amber-400">
+                        <Coins className="w-3.5 h-3.5" />
+                        {sub.payable_amount}
+                      </span>
+                    </td>
+                    <td className="py-4 px-6">
+                      {getStatusBadge(sub.status)}
+                    </td>
+                    <td className="py-4 px-6 text-xs text-slate-600 dark:text-slate-400 max-w-xs truncate font-mono">
+                      {sub.submission_details || 'N/A'}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
+            <span className="text-xs text-slate-500">
+              Page {currentPage} of {totalPages}
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

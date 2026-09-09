@@ -1,11 +1,14 @@
-import axios from "axios";
+import axios from 'axios';
+
+const baseURL = import.meta.env.VITE_BACKEND_URL || 'https://swift-tasks-server.vercel.app';
 
 const axiosInstance = axios.create({
-    baseURL: import.meta.env.VITE_BACKEND_URL,
-})
+  baseURL,
+  withCredentials: true,
+});
 
 const useAxios = () => {
-    return axiosInstance;
+  return axiosInstance;
 };
 
 export default useAxios;
