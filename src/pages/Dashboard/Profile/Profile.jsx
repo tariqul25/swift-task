@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 
 const Profile = () => {
-  const { user, role, coins, logOut } = useAuth();
+  const { user, role, coins, logOut, updateUserProfileState, fetchUser } = useAuth();
   const axiosSecure = useAxiosSecure();
 
   const [displayName, setDisplayName] = useState(user?.displayName || '');
@@ -116,6 +116,12 @@ const Profile = () => {
 
       setPhotoURL(finalPhotoUrl);
       setPreviewUrl(finalPhotoUrl);
+      if (updateUserProfileState) {
+        updateUserProfileState(displayName, finalPhotoUrl);
+      }
+      if (fetchUser) {
+        fetchUser();
+      }
 
       Swal.fire({
         icon: 'success',

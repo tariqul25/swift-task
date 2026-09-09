@@ -64,11 +64,29 @@ const AuthProvider = ({ children }) => {
     if (!user?.email) return;
     try {
       const res = await axiosInstance.get(`/api/users/${user.email}`);
-      setUser(res.data);
-      setCoins(res.data.coins || 0);
+      const dbUser = res.data;
+      setUser(prev => ({
+        ...prev,
+        ...dbUser,
+        name: dbUser.name,
+        photo: dbUser.photo,
+        displayName: dbUser.name,
+        photoURL: dbUser.photo,
+      }));
+      setCoins(dbUser.coins || 0);
     } catch (error) {
       console.error('Failed to fetch user:', error);
     }
+  };
+
+  const updateUserProfileState = (name, photo) => {
+    setUser(prev => prev ? ({
+      ...prev,
+      name: name || prev.name,
+      photo: photo || prev.photo,
+      displayName: name || prev.displayName,
+      photoURL: photo || prev.photoURL,
+    }) : prev);
   };
 
   useEffect(() => {
@@ -92,8 +110,8 @@ const AuthProvider = ({ children }) => {
             const mergedUser = {
               uid: currentUser.uid,
               email: currentUser.email,
-              name: currentUser.displayName || dbUser.name,
-              photo: currentUser.photoURL || dbUser.photo,
+              name: dbUser.name || currentUser.displayName || "User",
+              photo: dbUser.photo || currentUser.photoURL || "",
               role: dbUser.role,
               coins: dbUser.coins,
               idToken: idToken,
@@ -158,7 +176,8 @@ const AuthProvider = ({ children }) => {
     coins,
     setCoins,
     updateUserCoins,
-    fetchUser
+    fetchUser,
+    updateUserProfileState
   };
 
   return (
