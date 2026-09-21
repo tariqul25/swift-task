@@ -6,6 +6,7 @@ import { updateProfile } from 'firebase/auth';
 import useAxios from '../../../hooks/useAxios';
 import { UserPlus, Coins, ShieldCheck, Sparkles } from 'lucide-react';
 import { compressImageToBase64 } from '../../../utils/imageCompressor';
+import { getFriendlyFirebaseErrorMessage } from '../../../utils/firebaseErrors';
 
 const Register = () => {
   const { createUser, GoogleSignIn, setErrorMessage, errorMessage } = useContext(AuthContext);
@@ -78,6 +79,7 @@ const Register = () => {
         photo: photoUrl,
         role: selectedRole,
         coins: selectedRole === 'buyer' ? 50 : 10,
+        createdAt: new Date().toISOString(),
       };
 
       await axiosInstance.post('/api/users', newUser);
@@ -93,7 +95,8 @@ const Register = () => {
       navigate('/dashboard');
     } catch (error) {
       console.error('Registration Error:', error);
-      setErrorMessage(error.message || 'Registration failed. Please try again.');
+      const friendlyMsg = getFriendlyFirebaseErrorMessage(error);
+      setErrorMessage(friendlyMsg);
     } finally {
       setLoading(false);
     }
@@ -112,7 +115,8 @@ const Register = () => {
       navigate(location?.state?.from?.pathname || '/dashboard');
     } catch (error) {
       console.error('Google Sign In Error:', error);
-      setErrorMessage(error.message || 'Google Sign In failed');
+      const friendlyMsg = getFriendlyFirebaseErrorMessage(error);
+      setErrorMessage(friendlyMsg);
     }
   };
 

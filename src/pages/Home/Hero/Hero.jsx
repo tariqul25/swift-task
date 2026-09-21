@@ -1,11 +1,10 @@
 import React from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { Navigation, Pagination, Autoplay, EffectFade } from 'swiper/modules';
+import { Pagination, Autoplay, EffectFade } from 'swiper/modules';
 import { Link } from 'react-router';
 import { ArrowRight, Sparkles, CheckCircle2, ShieldCheck, Zap, Users, TrendingUp } from 'lucide-react';
 import useAuth from '../../../hooks/useAuth';
 import 'swiper/css';
-import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import 'swiper/css/effect-fade';
 
@@ -58,9 +57,8 @@ const Hero = () => {
       <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/15 rounded-full blur-3xl pointer-events-none" />
 
       <Swiper
-        modules={[Navigation, Pagination, Autoplay, EffectFade]}
+        modules={[Pagination, Autoplay, EffectFade]}
         effect="fade"
-        navigation
         pagination={{ clickable: true }}
         autoplay={{ delay: 6500, disableOnInteraction: false }}
         loop={true}

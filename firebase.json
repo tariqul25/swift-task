@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "swift-tasks-87d89",
     "public": "dist",
     "ignore": [
       "firebase.json",

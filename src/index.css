@@ -64,3 +64,13 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(100, 116, 139, 0.6);
 }
+
+/* Force hide all Swiper navigation arrows */
+.swiper-button-next,
+.swiper-button-prev {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+

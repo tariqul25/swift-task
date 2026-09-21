@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { AuthContext } from './AuthContext';
 import { auth } from '../firebase/firebase.config';
 import {
@@ -18,6 +18,7 @@ const AuthProvider = ({ children }) => {
   const [errorMessage, setErrorMessage] = useState('');
   const [coins, setCoins] = useState(0);
 
+  const isGoogleSigningIn = useRef(false);
   const axiosInstance = useAxios();
   const provider = new GoogleAuthProvider();
 
@@ -38,30 +39,44 @@ const AuthProvider = ({ children }) => {
 
 
   const GoogleSignIn = async () => {
-    const result = await signInWithPopup(auth, provider);
-    const googleUser = result.user;
-    if (googleUser?.email) {
-      try {
-        await axiosInstance.get(`/api/users/${googleUser.email}`);
-      } catch (err) {
-        if (err.response && err.response.status === 404) {
-          const newUser = {
-            uid: googleUser.uid,
-            name: googleUser.displayName || 'Google User',
-            email: googleUser.email,
-            photo: googleUser.photoURL || '',
-            role: 'worker',
-            coins: 10,
-          };
-          try {
-            await axiosInstance.post('/api/users', newUser);
-          } catch (createErr) {
-            console.error('Google user creation in DB failed:', createErr);
+    isGoogleSigningIn.current = true;
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const googleUser = result.user;
+      if (googleUser?.email) {
+        try {
+          const res = await axiosInstance.get(`/api/users/${googleUser.email}`);
+          if (res.data) {
+            setUser(prev => ({ ...prev, ...res.data }));
+            setRole(res.data.role);
+            setCoins(res.data.coins);
+          }
+        } catch (err) {
+          if (err.response && err.response.status === 404) {
+            const newUser = {
+              uid: googleUser.uid,
+              name: googleUser.displayName || 'Google User',
+              email: googleUser.email,
+              photo: googleUser.photoURL || '',
+              role: 'worker',
+              coins: 10,
+              createdAt: new Date().toISOString(),
+            };
+            try {
+              await axiosInstance.post('/api/users', newUser);
+              setUser(prev => ({ ...prev, ...newUser }));
+              setRole('worker');
+              setCoins(10);
+            } catch (createErr) {
+              console.error('Google user creation in DB failed:', createErr);
+            }
           }
         }
       }
+      return result;
+    } finally {
+      isGoogleSigningIn.current = false;
     }
-    return result;
   };
 
   const updateUserCoins = async (explicitCoins) => {
@@ -147,16 +162,18 @@ const AuthProvider = ({ children }) => {
           }
         } catch (error) {
           if (error.response && error.response.status === 404) {
-            // User does not exist in DB (deleted by admin) → log out immediately
-            console.warn('User deleted from DB. Signing out from Firebase Auth.');
-            try {
-              await signOut(auth);
-            } catch (signOutErr) {
-              console.warn('Sign out error:', signOutErr);
+            // User does not exist in DB (deleted by admin) → log out immediately (unless currently signing in via Google)
+            if (!isGoogleSigningIn.current) {
+              console.warn('User deleted from DB. Signing out from Firebase Auth.');
+              try {
+                await signOut(auth);
+              } catch (signOutErr) {
+                console.warn('Sign out error:', signOutErr);
+              }
+              setUser(null);
+              setRole(null);
+              setCoins(0);
             }
-            setUser(null);
-            setRole(null);
-            setCoins(0);
           } else {
             console.error('Fetch user error:', error.message);
           }

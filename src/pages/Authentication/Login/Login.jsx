@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { AuthContext } from '../../../contexts/AuthContext';
 import { LogIn, ShieldAlert, Sparkles, ArrowRight } from 'lucide-react';
+import { getFriendlyFirebaseErrorMessage } from '../../../utils/firebaseErrors';
 
 const Signin = () => {
   const { signIn, GoogleSignIn } = useContext(AuthContext);
@@ -26,7 +27,7 @@ const Signin = () => {
         navigate(location.state ? location.state : '/');
       })
       .catch(error => {
-        setErrorMessage(error.message);
+        setErrorMessage(getFriendlyFirebaseErrorMessage(error));
       });
   };
 
@@ -42,7 +43,7 @@ const Signin = () => {
       })
       .catch((error) => {
         console.error('Sign-in error:', error);
-        setErrorMessage(error.message || 'Invalid email or password.');
+        setErrorMessage(getFriendlyFirebaseErrorMessage(error));
       })
       .finally(() => {
         setLoading(false);
